@@ -10,6 +10,6 @@ zipp==3.20.2
 flask_sqlalchemy
 python-dotenv
 flask_migrate
-flask
+psycopg2
 
 
