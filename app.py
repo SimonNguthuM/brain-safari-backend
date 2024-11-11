@@ -1,14 +1,13 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from config import Config
+from db import db  
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-db = SQLAlchemy(app)
+db.init_app(app)  
 migrate = Migrate(app, db)
-
 
 from models import User, LearningPath, Module, Resource, Feedback, Comment, Reply, Challenge, Achievement, Leaderboard, ModuleResource, UserAchievement, UserLearningPath, UserChallenge, QuizContent, QuizSubmission
 
