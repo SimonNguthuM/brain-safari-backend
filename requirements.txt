@@ -11,5 +11,4 @@ flask_sqlalchemy
 python-dotenv
 flask_migrate
 psycopg2
-
-
+flask_login
