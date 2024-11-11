@@ -48,7 +48,7 @@ jobs:
         run: |
           git fetch origin
           git checkout main
-          git merge origin/dev -X theirs -m "Automated merge from dev to main"
+          git merge origin/dev -X theirs -m "Automated merge from dev to main" --allow-unrelated-histories
           git push origin main
 
   deploy:
