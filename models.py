@@ -51,11 +51,33 @@ class Feedback(db.Model):
 
 class Comment(db.Model):
     __tablename__ = 'comments'
-    pass
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    content = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime)
+
+    # Relationships
+    user = db.relationship("User", back_populates="comments")
+    replies = db.relationship("Reply", back_populates="comment")
+
 
 class Reply(db.Model):
     __tablename__ = 'replies'
-    pass
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    content = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime)
+
+    # Relationships
+    user = db.relationship("User", back_populates="replies")
+    comment = db.relationship("Comment", back_populates="replies")
+
+
 
 class Challenge(db.Model):
     __tablename__ = 'challenges'
