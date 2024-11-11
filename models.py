@@ -93,10 +93,20 @@ class Reply(db.Model):
 
 
 
-
+# challenge model
 class Challenge(db.Model):
     __tablename__ = 'challenges'
-    pass
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    points_reward = db.Column(db.Integer)
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
+
+    # Relationships
+    users = db.relationship("UserChallenge", back_populates="challenge")
+
 
 class Achievement(db.Model):
     __tablename__ = 'achievements'
