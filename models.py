@@ -64,6 +64,9 @@ class Comment(db.Model):
     user = db.relationship("User", back_populates="comments")
     replies = db.relationship("Reply", back_populates="comment")
 
+    def __repr__(self):
+        return f"<Comment(id={self.id}, user_id={self.user_id}, content='{self.content[:20]}...')>"
+
 
 class Reply(db.Model):
     __tablename__ = 'replies'
@@ -78,6 +81,10 @@ class Reply(db.Model):
     # Relationships
     user = db.relationship("User", back_populates="replies")
     comment = db.relationship("Comment", back_populates="replies")
+
+    def __repr__(self):
+        return f"<Reply(id={self.id}, user_id={self.user_id}, comment_id={self.comment_id}, content='{self.content[:20]}...')>"
+
 
 
 
@@ -154,5 +161,72 @@ class QuizSubmission(db.Model):
 
     def __repr__(self):
         return f"<QuizSubmission(id={self.id}, user_id={self.user_id}, quiz_id={self.quiz_id}, score={self.score})>"
+    
+
+class ModuleResource(db.Model):
+    __tablename__ = 'module_resources'
+
+    id = db.Column(db.Integer, primary_key=True)
+    module_id = db.Column(db.Integer, db.ForeignKey('modules.id'), nullable=False)
+    resource_id = db.Column(db.Integer, db.ForeignKey('resources.id'), nullable=False)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    
+    module = db.relationship("Module", back_populates="resources")
+    resource = db.relationship("Resource", back_populates="modules")
+
+    def __repr__(self):
+        return f"<ModuleResource(id={self.id}, module_id={self.module_id}, resource_id={self.resource_id})>"
+
+
+
+class UserAchievement(db.Model):
+    __tablename__ = 'user_achievements'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    achievement_id = db.Column(db.Integer, db.ForeignKey('achievements.id'), nullable=False)
+    earned_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+   
+    user = db.relationship("User", back_populates="achievements")
+    achievement = db.relationship("Achievement", back_populates="users")
+    
+    def __repr__(self):
+        return f"<UserAchievement(id={self.id}, user_id={self.user_id}, achievement_id={self.achievement_id})>"
+
+class UserLearningPath(db.Model):
+    __tablename__ = 'user_learning_paths'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    learning_path_id = db.Column(db.Integer, db.ForeignKey('learning_paths.id'), nullable=False)
+    progress_percentage = db.Column(db.Integer)
+    last_accessed = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+
+   
+    user = db.relationship("User", back_populates="enrolled_paths")
+    learning_path = db.relationship("LearningPath", back_populates="enrolled_users")
+
+    def __repr__(self):
+        return f"<UserLearningPath(id={self.id}, user_id={self.user_id}, learning_path_id={self.learning_path_id})>"
+
+
+class UserChallenge(db.Model):
+    __tablename__ = 'user_challenges'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    challenge_id = db.Column(db.Integer, db.ForeignKey('challenges.id'), nullable=False)
+    completed_at = db.Column(db.DateTime)
+
+    
+    user = db.relationship("User", back_populates="challenges")
+    challenge = db.relationship("Challenge", back_populates="users")
+
+    def __repr__(self):
+        return f"<UserChallenge(id={self.id}, user_id={self.user_id}, challenge_id={self.challenge_id})>"
 
 
