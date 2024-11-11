@@ -47,7 +47,15 @@ class Resource(db.Model):
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'
-    pass
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    resource_id = db.Column(db.Integer, db.ForeignKey('resources.id'))
+    comment = db.Column(db.Text)
+    rating = db.Column(db.Integer)
+
+    # Relationships
+    user = db.relationship("User", back_populates="feedback")
+    resource = db.relationship("Resource", back_populates="feedback")
 
 class Comment(db.Model):
     __tablename__ = 'comments'
