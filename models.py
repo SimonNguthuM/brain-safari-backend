@@ -31,10 +31,10 @@ class User(db.Model, UserMixin, SerializerMixin):
 class LearningPath(db.Model):
     __tablename__ = 'learning_paths'
 
-    learning_path_id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
     description = db.Column(db.Text)
-    contributor_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     rating = db.Column(db.Integer)
 
     modules = db.relationship('Module', back_populates='learning_path')
@@ -43,10 +43,10 @@ class LearningPath(db.Model):
 class Module(db.Model):
     __tablename__ = 'modules'
     
-    module_id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
     description = db.Column(db.Text)
-    learningpath_id = db.Column(db.Integer, db.ForeignKey('learning_paths.learning_path_id'))
+    learningpath_id = db.Column(db.Integer, db.ForeignKey('learning_paths.id'))
 
     learning_path = db.relationship('LearningPath', back_populates='modules')
     resources = db.relationship('ModuleResource', back_populates='module')
@@ -55,14 +55,14 @@ class Module(db.Model):
 class Resource(db.Model):
     __tablename__ = 'resources'
 
-    resource_id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
     url = db.Column(db.String(200))
     type = db.Column(db.Enum('Video', 'Article', 'Tutorial', name='resource_type'))
     description = db.Column(db.Text)
-    contributor_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-    feedbacks = db.relationship('Feedback', back_populates='resource')
+    feedback = db.relationship('Feedback', back_populates='resource')
     modules = db.relationship('ModuleResource', back_populates='resource')
 
 class Feedback(db.Model):
@@ -226,7 +226,7 @@ class QuizContent(db.Model):
     __tablename__ = 'quiz_content'
     
     id = db.Column(db.Integer, primary_key=True)
-    module_id = db.Column(db.Integer, db.ForeignKey('module.id'), nullable=True) 
+    module_id = db.Column(db.Integer, db.ForeignKey('modules.id'), nullable=True) 
     parent_id = db.Column(db.Integer, db.ForeignKey('quiz_content.id'), nullable=True)  # Self-referencing foreign key
     type = db.Column(db.String, nullable=False)  # "quiz", "question", or "option"
     content_text = db.Column(db.Text, nullable=False)  # Quiz title, question text, or option text
@@ -246,7 +246,7 @@ class QuizSubmission(db.Model):
     __tablename__ = 'quiz_submission'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) 
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) 
     quiz_id = db.Column(db.Integer, db.ForeignKey('quiz_content.id'), nullable=False)  # Refers to a quiz in QuizContent
     score = db.Column(db.Integer, nullable=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)

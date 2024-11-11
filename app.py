@@ -1,10 +1,16 @@
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from config import Config
 
 app = Flask(__name__)
+app.config.from_object(Config)
 
-@app.route("/")
-def home():
-    return "<h1>Welcome back</h1>"
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5555)
+
+from models import User, LearningPath, Module, Resource, Feedback, Comment, Reply, Challenge, Achievement, Leaderboard, ModuleResource, UserAchievement, UserLearningPath, UserChallenge, QuizContent, QuizSubmission
+
+if __name__ == '__main__':
+    app.run()
