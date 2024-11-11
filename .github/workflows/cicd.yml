@@ -63,8 +63,8 @@ jobs:
           curl -X POST "https://api.render.com/v1/services/srv-csossa1u0jms738pdbfg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY" \
           -d '{
-                "branch": "main",  # Trigger deployment from the main branch
+                "branch": "main",  
                 "env": {
-                  "DATABASE_URL": "$POSTGRES_URL"  # Passing the PostgreSQL URL to the app
+                  "DATABASE_URL": "$POSTGRES_URL" 
                 }
               }'
