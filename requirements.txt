@@ -12,3 +12,4 @@ python-dotenv
 flask_migrate
 psycopg2
 flask_login
+sqlalchemy_serializer
