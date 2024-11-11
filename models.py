@@ -3,10 +3,30 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from sqlalchemy.orm import relationship
+from sqlalchemy_serializer import SerializerMixin
 
-class User(db.Model):
+
+class User(db.Model, UserMixin, SerializerMixin):
     __tablename__ = 'users'
-    pass
+    
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    role = db.Column(db.String(50), nullable=False)  # Admin, Contributor, Learner
+    points = db.Column(db.Integer, default=0)
+    date_joined = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships with other models
+    leaderboard_entry = relationship('Leaderboard', backref='user', uselist=False)  # One-to-one with Leaderboard
+    feedback = relationship('Feedback', back_populates='user')  # One-to-many with Feedback
+    comments = relationship('Comment', back_populates='user')  # One-to-many with Comments
+    replies = relationship('Reply', back_populates='user')  # One-to-many with Replies
+    enrolled_paths = relationship('UserLearningPath', back_populates='user')  # Many-to-many with Learning Paths
+    challenges = relationship('UserChallenge', back_populates='user')  # Many-to-many with Challenges
+    achievements = relationship('UserAchievement', back_populates='user')  # Many-to-many with Achievements
+    quiz_submissions = relationship('QuizSubmission', back_populates='user')  # One-to-many with Quiz Submissions
+
 
 class LearningPath(db.Model):
     __tablename__ = 'learning_paths'
@@ -122,9 +142,16 @@ class Achievement(db.Model):
     users = db.relationship("UserAchievement", back_populates="achievement")
 
 
-class Leaderboard(db.Model):
-    __tablename__ = 'leaderboard'
-    pass
+class Leaderboard(db.Model, SerializerMixin):
+    __tablename__ = 'leaderboards'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    score = db.Column(db.Integer, default=0)  # Leaderboard score
+    
+    # Foreign key relationship with User
+    user = relationship('User', back_populates='leaderboard_entry')
+
 
 class ModuleResource(db.Model):
     __tablename__ = 'module_resources'
