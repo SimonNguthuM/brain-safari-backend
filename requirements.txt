@@ -9,4 +9,7 @@ Werkzeug==3.0.6
 zipp==3.20.2
 flask_sqlalchemy
 python-dotenv
+flask_migrate
+flask
+
 
