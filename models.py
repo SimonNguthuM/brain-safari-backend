@@ -9,15 +9,40 @@ class User(db.Model):
 
 class LearningPath(db.Model):
     __tablename__ = 'learning_paths'
-    pass
+
+    learning_path_id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    contributor_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    rating = db.Column(db.Integer)
+
+    modules = db.relationship('Module', back_populates='learning_path')
+    enrolled_users = db.relationship('UserLearningPath', back_populates='learning_path')
 
 class Module(db.Model):
     __tablename__ = 'modules'
-    pass
+    
+    module_id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    learningpath_id = db.Column(db.Integer, db.ForeignKey('learning_paths.learning_path_id'))
+
+    learning_path = db.relationship('LearningPath', back_populates='modules')
+    resources = db.relationship('ModuleResource', back_populates='module')
+    quiz_content = db.relationship('QuizContent', back_populates='module')
 
 class Resource(db.Model):
     __tablename__ = 'resources'
-    pass
+
+    resource_id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    url = db.Column(db.String(200))
+    type = db.Column(db.Enum('Video', 'Article', 'Tutorial', name='resource_type'))
+    description = db.Column(db.Text)
+    contributor_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+
+    feedbacks = db.relationship('Feedback', back_populates='resource')
+    modules = db.relationship('ModuleResource', back_populates='resource')
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'
