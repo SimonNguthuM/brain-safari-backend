@@ -77,7 +77,7 @@ jobs:
           
       - name: load .env file
         run:
-          cat ./.env >> $GITHUB_ENV
+          cat .env >> $GITHUB_ENV
           
       - name: run migrations
         env:
