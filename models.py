@@ -110,7 +110,7 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    parent_comment_id = db.olumn(db.Integer, db.ForeignKey('comments.id'), nullable=True)
+    parent_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="comments")
