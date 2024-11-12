@@ -100,10 +100,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
   
-      - name: Deploy to Render
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-        run: |
-          curl -X POST "https://api.render.com/v1/services/srv-csossa1u0jms738pdbfg/deploys" \
-          -H "Authorization: Bearer $RENDER_API_KEY" \
-          -d '{"branch": "main"}'    
+      # - name: Deploy to Render
+      #   env:
+      #     RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      #   run: |
+      #     curl -X POST "https://api.render.com/v1/services/srv-csossa1u0jms738pdbfg/deploys" \
+      #     -H "Authorization: Bearer $RENDER_API_KEY" \
+      #     -d '{"branch": "main"}'    
