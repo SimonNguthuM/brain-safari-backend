@@ -139,8 +139,9 @@ class Achievement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     description = db.Column(db.Text)
-    icon_url = db.Column(db.String(200))
-    points_required = db.Column(db.Integer)
+    badge_icon_url = db.Column(db.String(200))
+    points = db.Column(db.Integer)
+    xp_url = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -229,7 +230,10 @@ class QuizContent(db.Model):
     module = relationship("Module", back_populates="quiz_content")
     parent = relationship('QuizContent', remote_side=[id], back_populates='children')
     children = relationship('QuizContent', back_populates='parent')
+    submissions = relationship("QuizSubmission", back_populates="quiz")
 
+    def __repr__(self):
+        return f"<QuizContent(id={self.id}, type={self.type}, content_text='{self.content_text[:20]}...', points={self.points})>"
 
 class QuizSubmission(db.Model):
     __tablename__ = 'quiz_submission'
@@ -243,3 +247,6 @@ class QuizSubmission(db.Model):
     # Relationships
     user = relationship('User', back_populates='quiz_submissions')
     quiz = relationship('QuizContent', back_populates='submissions')
+
+    def __repr__(self):
+        return f"<QuizSubmission(id={self.id}, user_id={self.user_id}, quiz_id={self.quiz_id}, score={self.score})>"
