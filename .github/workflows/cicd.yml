@@ -97,7 +97,7 @@ jobs:
 
   deploy-ubuntu:
     runs-on: ubuntu-latest
-    needs: merge
+    needs: merge-ubuntu
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
