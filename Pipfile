@@ -18,6 +18,7 @@ flask-migrate = "*"
 alembic = "*"
 python-dotenv = "*"
 flask-jwt-extended = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
