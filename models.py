@@ -13,7 +13,7 @@ class User(db.Model, UserMixin, SerializerMixin):
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(50), nullable=False)  # Admin, Contributor, Learner
+    role = db.Column(db.String(50), nullable=False, default='Learner')  # Default role is 'Learner'
     points = db.Column(db.Integer, default=0)
     date_joined = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -27,6 +27,19 @@ class User(db.Model, UserMixin, SerializerMixin):
     achievements = relationship('UserAchievement', back_populates='user')
     quiz_submissions = relationship('QuizSubmission', back_populates='user')
 
+    def set_password(self, password):
+        """Hash and store the user's password."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Check the provided password against the stored hash."""
+        return check_password_hash(self.password_hash, password)
+
+    def add_points(self, points):
+        """Add points to the user's score and update the leaderboard."""
+        self.points += points
+        db.session.commit()
+        update_leaderboard(self.id, self.points)  # Call the leaderboard update function
 
 class LearningPath(db.Model):
     __tablename__ = 'learning_paths'
@@ -243,3 +256,5 @@ class QuizSubmission(db.Model):
     # Relationships
     user = relationship('User', back_populates='quiz_submissions')
     quiz = relationship('QuizContent', back_populates='submissions')
+
+
