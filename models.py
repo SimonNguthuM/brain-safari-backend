@@ -80,22 +80,24 @@ class Feedback(db.Model):
     rating = db.Column(db.Integer)
 
     # Relationships
-    user = relationship("User", back_populates="feedback")
-    resource = relationship("Resource", back_populates="feedback")
+    user = db.relationship("User", back_populates="feedback")
+    resource = db.relationship("Resource", back_populates="feedback")
+    replies =db.relationship("Reply", back_populates ="feedback")
 
 
-class Comment(db.Model):
-    __tablename__ = 'comments'
+
+# class Comment(db.Model):
+#     __tablename__ = 'comments'
     
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    content = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime)
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+#     content = db.Column(db.Text)
+#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+#     updated_at = db.Column(db.DateTime)
 
-    # Relationships
-    user = relationship("User", back_populates="comments")
-    replies = relationship("Reply", back_populates="comment")
+#     # Relationships
+#     user = relationship("User", back_populates="comments")
+#     replies = relationship("Reply", back_populates="comment")
 
 
 class Reply(db.Model):
@@ -103,14 +105,18 @@ class Reply(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
+    feedback_id = db.Column(db.Integer, db.ForeignKey('feedback.id'))
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime)
 
     # Relationships
-    user = relationship("User", back_populates="replies")
-    comment = relationship("Comment", back_populates="replies")
+    user = db.relationship("User", back_populates="replies")
+    feedback = db.relationship("Feedback", back_populates="replies")
+
+    def __repr__(self):
+        return f"<Reply(id={self.id}, user_id={self.user_id}, feedback_id={self.feedback_id}, content='{self.content[:20]}...')>"
+
 
 
 class Challenge(db.Model):
