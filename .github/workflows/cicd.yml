@@ -83,7 +83,7 @@ jobs:
           -H "Authorization: Bearer $RENDER_API_KEY" \
           -d '{"branch": "main"}'
 
-  deploy-macos:
+  deploy-macOS:
     runs-on: macos-latest
     needs: merge
     steps:
