@@ -13,8 +13,8 @@ migrate = Migrate(app, db)
 api = Api(app)
 
 from models import (
-    User, LearningPath, Module, Resource, Feedback, Comment, 
-    Reply, Challenge, Achievement, Leaderboard, ModuleResource, 
+    User, LearningPath, Module, Resource, 
+    Challenge, Achievement, Leaderboard, ModuleResource, 
     UserAchievement, UserLearningPath, UserChallenge, 
     QuizContent, QuizSubmission
 )
@@ -137,9 +137,9 @@ class Feedbacks(Resource):
     def get(self):
         return {"message": "Feedbacks"}
 
-class Comments(Resource):
-    def get(self):
-        return {"message": "Comments"}
+# class Comments(Resource):
+#     def get(self):
+#         return {"message": "Comments"}
 
 class Quizzes(Resource):
     def get(self, id):
@@ -167,7 +167,7 @@ api.add_resource(ModuleDetail, '/module/<int:id>')
 api.add_resource(Resources, '/resources')
 api.add_resource(ResourceDetail, '/resource/<int:id>')
 api.add_resource(Feedbacks, '/feedback')
-api.add_resource(Comments, '/comments')
+# api.add_resource(Comments, '/comments')
 api.add_resource(Quizzes, '/quiz/<int:id>')
 api.add_resource(Challenges, '/challenge/<int:id>')
 api.add_resource(Dashboard, '/dashboard')

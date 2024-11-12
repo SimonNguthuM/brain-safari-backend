@@ -19,9 +19,9 @@ class User(db.Model, UserMixin, SerializerMixin):
 
     # Relationships
     leaderboard_entry = relationship('Leaderboard', back_populates='user', uselist=False)
-    feedback = relationship('Feedback', back_populates='user')
-    comments = relationship('Comment', back_populates='user')
-    replies = relationship('Reply', back_populates='user')
+    
+    comments = relationship('Comment', back_populates='user', cascade='all, delete-orphan')
+   
     enrolled_paths = relationship('UserLearningPath', back_populates='user')
     challenges = relationship('UserChallenge', back_populates='user')
     achievements = relationship('UserAchievement', back_populates='user')
@@ -82,54 +82,52 @@ class Resource(db.Model):
     # Relationships
     feedback = relationship('Feedback', back_populates='resource')
     modules = relationship('ModuleResource', back_populates='resource')
+    comments = db.relationship('Comment', back_populates='resource', cascade= 'all, delete-orphan')
+
+# class Response(db.Model):
+#     __tablename__ = 'responses'
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+#     resource_id = db.Column(db.Integer, db.ForeignKey('resources.id'))
+#     comment = db.Column(db.Text)
+#     rating = db.Column(db.Integer)
+
+#     # Relationships
+#     user = db.relationship("User", back_populates="feedback")
+#     resource = db.relationship("Resource", back_populates="feedback")
+#     replies =db.relationship("Reply", back_populates ="feedback")
 
 
-class Feedback(db.Model):
-    __tablename__ = 'feedback'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    resource_id = db.Column(db.Integer, db.ForeignKey('resources.id'))
-    comment = db.Column(db.Text)
-    rating = db.Column(db.Integer)
-
-    # Relationships
-    user = db.relationship("User", back_populates="feedback")
-    resource = db.relationship("Resource", back_populates="feedback")
-    replies =db.relationship("Reply", back_populates ="feedback")
-
-
-
-# class Comment(db.Model):
-#     __tablename__ = 'comments'
+# class Reply(db.Model):
+#     __tablename__ = 'replies'
     
 #     id = db.Column(db.Integer, primary_key=True)
 #     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+#     feedback_id = db.Column(db.Integer, db.ForeignKey('feedback.id'))
 #     content = db.Column(db.Text)
 #     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 #     updated_at = db.Column(db.DateTime)
 
 #     # Relationships
-#     user = relationship("User", back_populates="comments")
-#     replies = relationship("Reply", back_populates="comment")
+#     user = db.relationship("User", back_populates="replies")
+#     feedback = db.relationship("Feedback", back_populates="replies")
+
+#     def __repr__(self):
+#         return f"<Reply(id={self.id}, user_id={self.user_id}, feedback_id={self.feedback_id}, content='{self.content[:20]}...')>"
 
 
-class Reply(db.Model):
-    __tablename__ = 'replies'
+class Comment(db.Model):
+    __tablename__ = 'comments'
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    feedback_id = db.Column(db.Integer, db.ForeignKey('feedback.id'))
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime)
+    parent_comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=True)
 
     # Relationships
-    user = db.relationship("User", back_populates="replies")
-    feedback = db.relationship("Feedback", back_populates="replies")
-
-    def __repr__(self):
-        return f"<Reply(id={self.id}, user_id={self.user_id}, feedback_id={self.feedback_id}, content='{self.content[:20]}...')>"
-
+    user = relationship("User", back_populates="comments")
+    resource = db.relationship('Resource', back_populates= 'comments')
 
 
 class Challenge(db.Model):
@@ -137,13 +135,14 @@ class Challenge(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
+    resource_id =db.Column(db.Integer, db.ForeignKey('resources.id'))
     description = db.Column(db.Text)
     points_reward = db.Column(db.Integer)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
     # Relationships
-    users = relationship("UserChallenge", back_populates="challenge")
+    users = db.relationship("UserChallenge", back_populates="challenge")
 
 
 class Achievement(db.Model):
