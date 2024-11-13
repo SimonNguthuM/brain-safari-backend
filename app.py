@@ -19,7 +19,7 @@ from models import (
     QuizContent, QuizSubmission
 )
 
-# User Registration and Role Assignment
+# User Registration and Role Assignment.
 class Signup(Resource):
     def post(self):
         """Registers a new user with a default 'Learner' role."""
