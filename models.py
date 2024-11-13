@@ -25,6 +25,20 @@ class User(db.Model, UserMixin, SerializerMixin):
     achievements = db.relationship('UserAchievement', back_populates='user')
     quiz_submissions = db.relationship('QuizSubmission', back_populates='user')
 
+    def set_password(self, password):
+        """Hash and store the user's password."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Check the provided password against the stored hash."""
+        return check_password_hash(self.password_hash, password)
+
+    def add_points(self, points):
+        """Add points to the user's score and update the leaderboard."""
+        self.points += points
+        db.session.commit()
+        update_leaderboard(self.id, self.points)
+
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"
 
