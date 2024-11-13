@@ -14,12 +14,12 @@ db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
 
-# LearningPath, Module, Resource, Feedback,
-#     Reply, Challenge, Achievement, Leaderboard, ModuleResource,
-#     UserAchievement, UserLearningPath, UserChallenge,
-#     QuizContent, QuizSubmission
+
 from models import (
-    User
+    User, LearningPath, Module, Resource, Feedback,
+    Reply, Challenge, Achievement, Leaderboard, ModuleResource,
+    UserAchievement, UserLearningPath, UserChallenge,
+    QuizContent, QuizSubmission
 )
 
 
