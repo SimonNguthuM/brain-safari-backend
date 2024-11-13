@@ -17,69 +17,55 @@ class User(db.Model, UserMixin, SerializerMixin):
     points = db.Column(db.Integer, default=0)
     date_joined = db.Column(db.DateTime, default=datetime.now())
 
-#     # Relationships with other models
-#     leaderboard_entry = relationship('Leaderboard', backref='user', uselist=False)  # One-to-one with Leaderboard
-#     feedback = relationship('Feedback', back_populates='user')  # One-to-many with Feedback
-#     comments = relationship('Comment', back_populates='user')  # One-to-many with Comments
-#     replies = relationship('Reply', back_populates='user')  # One-to-many with Replies
-#     enrolled_paths = relationship('UserLearningPath', back_populates='user')  # Many-to-many with Learning Paths
-#     challenges = relationship('UserChallenge', back_populates='user')  # Many-to-many with Challenges
-#     achievements = relationship('UserAchievement', back_populates='user')  # Many-to-many with Achievements
-#     quiz_submissions = relationship('QuizSubmission', back_populates='user')  # One-to-many with Quiz Submissions
-
-# class Comment(db.Model):
-#     __tablename__ = 'comments'
-    
-#     id = db.Column(db.Integer, primary_key=True)
-#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-#     content = db.Column(db.Text)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-#     updated_at = db.Column(db.DateTime)
-
-#     # Relationships
-#     user = db.relationship("User", back_populates="comments")
-#     replies = db.relationship("Reply", back_populates="comment")
-
-#     def __repr__(self):
-#         return f"<Comment(id={self.id}, user_id={self.user_id}, content='{self.content[:20]}...')>"
+    # Relationships
+#     leaderboard_entry = relationship('Leaderboard', back_populates='user', uselist=False)
+#     feedback = relationship('Feedback', back_populates='user')
+#     comments = relationship('Comment', back_populates='user')
+#     replies = relationship('Reply', back_populates='user')
+#     enrolled_paths = relationship('UserLearningPath', back_populates='user')
+#     challenges = relationship('UserChallenge', back_populates='user')
+#     achievements = relationship('UserAchievement', back_populates='user')
+#     quiz_submissions = relationship('QuizSubmission', back_populates='user')
 
 
 # class LearningPath(db.Model):
 #     __tablename__ = 'learning_paths'
 
-#     id = db.Column(db.Integer, primary_key=True)
-#     title = db.Column(db.String(100))
-#     description = db.Column(db.Text)
-#     contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-#     rating = db.Column(db.Integer)
+# #     id = db.Column(db.Integer, primary_key=True)
+# #     title = db.Column(db.String(100))
+# #     description = db.Column(db.Text)
+# #     contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+# #     rating = db.Column(db.Integer)
 
-#     modules = db.relationship('Module', back_populates='learning_path')
-#     enrolled_users = db.relationship('UserLearningPath', back_populates='learning_path')
+# #     modules = db.relationship('Module', back_populates='learning_path')
+# #     enrolled_users = db.relationship('UserLearningPath', back_populates='learning_path')
 
-# class Module(db.Model):
-#     __tablename__ = 'modules'
+# # class Module(db.Model):
+# #     __tablename__ = 'modules'
     
-#     id = db.Column(db.Integer, primary_key=True)
-#     title = db.Column(db.String(100))
-#     description = db.Column(db.Text)
-#     learningpath_id = db.Column(db.Integer, db.ForeignKey('learning_paths.id'))
+# #     id = db.Column(db.Integer, primary_key=True)
+# #     title = db.Column(db.String(100))
+# #     description = db.Column(db.Text)
+# #     learningpath_id = db.Column(db.Integer, db.ForeignKey('learning_paths.id'))
 
-#     learning_path = db.relationship('LearningPath', back_populates='modules')
-#     resources = db.relationship('ModuleResource', back_populates='module')
-#     quiz_content = db.relationship('QuizContent', back_populates='module')
+# #     learning_path = db.relationship('LearningPath', back_populates='modules')
+# #     resources = db.relationship('ModuleResource', back_populates='module')
+# #     quiz_content = db.relationship('QuizContent', back_populates='module')
 
-# class Resource(db.Model):
-#     __tablename__ = 'resources'
+# # class Resource(db.Model):
+# #     __tablename__ = 'resources'
 
-#     id = db.Column(db.Integer, primary_key=True)
-#     title = db.Column(db.String(100))
-#     url = db.Column(db.String(200))
-#     type = db.Column(db.Enum('Video', 'Article', 'Tutorial', name='resource_type'))
-#     description = db.Column(db.Text)
-#     contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+# #     id = db.Column(db.Integer, primary_key=True)
+# #     title = db.Column(db.String(100))
+# #     url = db.Column(db.String(200))
+# #     type = db.Column(db.Enum('Video', 'Article', 'Tutorial', name='resource_type'))
+# #     description = db.Column(db.Text)
+# #     contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-#     feedback = db.relationship('Feedback', back_populates='resource')
-#     modules = db.relationship('ModuleResource', back_populates='resource')
+#     # Relationships
+#     feedback = relationship('Feedback', back_populates='resource')
+#     modules = relationship('ModuleResource', back_populates='resource')
+
 
 # class Feedback(db.Model):
 #     __tablename__ = 'feedback'
@@ -90,11 +76,11 @@ class User(db.Model, UserMixin, SerializerMixin):
 #     rating = db.Column(db.Integer)
 
 #     # Relationships
-#     user = db.relationship("User", back_populates="feedback")
-#     resource = db.relationship("Resource", back_populates="feedback")
+#     user = relationship("User", back_populates="feedback")
+#     resource = relationship("Resource", back_populates="feedback")
 
-# class Comment(db.Model):
-#     __tablename__ = 'comments'
+# # class Comment(db.Model):
+# #     __tablename__ = 'comments'
     
 #     id = db.Column(db.Integer, primary_key=True)
 #     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -103,11 +89,8 @@ class User(db.Model, UserMixin, SerializerMixin):
 #     updated_at = db.Column(db.DateTime)
 
 #     # Relationships
-#     user = db.relationship("User", back_populates="comments")
-#     replies = db.relationship("Reply", back_populates="comment")
-
-#     def __repr__(self):
-#         return f"<Comment(id={self.id}, user_id={self.user_id}, content='{self.content[:20]}...')>"
+#     user = relationship("User", back_populates="comments")
+#     replies = relationship("Reply", back_populates="comment")
 
 
 # class Reply(db.Model):
@@ -121,17 +104,17 @@ class User(db.Model, UserMixin, SerializerMixin):
 #     updated_at = db.Column(db.DateTime)
 
 #     # Relationships
-#     user = db.relationship("User", back_populates="replies")
-#     comment = db.relationship("Comment", back_populates="replies")
+#     user = relationship("User", back_populates="replies")
+#     comment = relationship("Comment", back_populates="replies")
 
-#     def __repr__(self):
-#         return f"<Reply(id={self.id}, user_id={self.user_id}, comment_id={self.comment_id}, content='{self.content[:20]}...')>"
+# #     def __repr__(self):
+# #         return f"<Reply(id={self.id}, user_id={self.user_id}, comment_id={self.comment_id}, content='{self.content[:20]}...')>"
 
 
 
-# # challenge model
-# class Challenge(db.Model):
-#     __tablename__ = 'challenges'
+# # # challenge model
+# # class Challenge(db.Model):
+# #     __tablename__ = 'challenges'
 
 #     id = db.Column(db.Integer, primary_key=True)
 #     title = db.Column(db.String(100))
@@ -141,7 +124,7 @@ class User(db.Model, UserMixin, SerializerMixin):
 #     end_date = db.Column(db.DateTime)
 
 #     # Relationships
-#     users = db.relationship("UserChallenge", back_populates="challenge")
+#     users = relationship("UserChallenge", back_populates="challenge")
 
 
 # class Achievement(db.Model):
