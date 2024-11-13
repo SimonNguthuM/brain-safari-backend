@@ -11,6 +11,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: brain_safari_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+          
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -18,12 +33,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.12' 
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt  
+
+      - name: Set up environment
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/brain_safari_db" >> .env
 
       # - name: Run Tests (Optional)
       #   run: |
@@ -57,14 +76,14 @@ jobs:
     steps:
       - name: Deploy to Render
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}  
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}      
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
           curl -X POST "https://api.render.com/v1/services/srv-csossa1u0jms738pdbfg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY" \
           -d '{
-                "branch": "main",  
+                "branch": "main",
                 "env": {
-                  "DATABASE_URL": "$POSTGRES_URL" 
+                  "DATABASE_URL": "$POSTGRES_URL"
                 }
               }'
