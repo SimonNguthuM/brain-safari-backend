@@ -77,10 +77,9 @@ jobs:
           
       - name: load .env file
         run:
-          cat ./server/.env >> $GITHUB_ENV
+          cat .env >> $GITHUB_ENV
           
       - name: run migrations
-        working-directory: ./server
         env:
           DATABASE_URL: ${{env.DATABASE_URL}}
         run:
