@@ -16,6 +16,7 @@ psycopg2-binary = "*"
 psycopg = "*"
 sqlalchemy-serializer = "*"
 flask-login = "*"
+alembic = "*"
 
 [dev-packages]
 
