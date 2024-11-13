@@ -117,7 +117,7 @@ from models import (
 
 @app.route("/")
 def home():
-    return "<h1>Welcome here. you better work</h1>"
+    return "<h1>Welcome here. You better work!</h1>"
 
 
 if __name__ == "__main__":
