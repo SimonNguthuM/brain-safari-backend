@@ -98,75 +98,75 @@ def update_leaderboard(user_id, new_score):
         db.session.add(leaderboard_entry)
     db.session.commit()
 
-# class LearningPaths(RestResource):
-#     def get(self):
-#         return {"message": "All learning paths"}
+class LearningPaths(RestResource):
+    def get(self):
+        return {"message": "All learning paths"}
 
-# class LearningPathDetail(RestResource):
-#     def get(self, id):
-#         return {"message": f"Learning path {id}"}
+class LearningPathDetail(RestResource):
+    def get(self, id):
+        return {"message": f"Learning path {id}"}
 
-# class Modules(RestResource):
-#     def get(self):
-#         return {"message": "All modules"}
+class Modules(RestResource):
+    def get(self):
+        return {"message": "All modules"}
 
-# class ModuleDetail(RestResource):
-#     def get(self, id):
-#         return {"message": f"Module {id}"}
+class ModuleDetail(RestResource):
+    def get(self, id):
+        return {"message": f"Module {id}"}
 
-# class Resources(RestResource):
-#     def get(self):
-#         return {"message": "All resources"}
+class Resources(RestResource):
+    def get(self):
+        return {"message": "All resources"}
 
-# class ResourceDetail(RestResource):
-#     def get(self, id):
-#         return {"message": f"Resource {id}"}
+class ResourceDetail(RestResource):
+    def get(self, id):
+        return {"message": f"Resource {id}"}
 
-# class Feedbacks(RestResource):
-#     def get(self):
-#         return {"message": "Feedbacks"}
+class Feedbacks(RestResource):
+    def get(self):
+        return {"message": "Feedbacks"}
 
-# class Comments(RestResource):
-#     def get(self):
-#         return {"message": "Comments"}
+class Comments(RestResource):
+    def get(self):
+        return {"message": "Comments"}
 
-# class Quizzes(RestResource):
-#     def get(self):
-#         return {"message": "quiz"}
+class Quizzes(RestResource):
+    def get(self):
+        return {"message": "Quizes"}
 
-# class QuizContentResource(RestResource):
-#     def get(self):
-#         return {"message": "quiz"}
+class QuizContentResource(RestResource):
+    def get(self, id):
+        return {"message": f"Quiz {id}"}
 
-# class QuizSubmissionResource(RestResource):
-#     def get(self):
-#         return {"message": "quiz"}
+class QuizSubmissionResource(RestResource):
+    def get(self, id):
+        return {"message": f"Quiz {id}"}
 
-# class Challenges(RestResource):
-#     def get(self, id):
-#         return {"message": f"Challenge {id}"}
+class Challenges(RestResource):
+    def get(self, id):
+        return {"message": f"Challenge {id}"}
 
-# class Achievements(RestResource):
-#     def get(self):
-#         return {"message": "achievement"}
+class Achievements(RestResource):
+    def get(self):
+        return {"message": "achievement"}
 
 api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
 api.add_resource(UpdateRole, '/update_role')
 api.add_resource(Logout, '/logout')
-# api.add_resource(LearningPaths, '/learning_paths')
-# api.add_resource(LearningPathDetail, '/learning_path/<int:id>')
-# api.add_resource(Modules, '/modules')
-# api.add_resource(ModuleDetail, '/module/<int:id>')
-# api.add_resource(Resources, '/resources')
-# api.add_resource(ResourceDetail, '/resource/<int:id>')
-# api.add_resource(Feedbacks, '/feedback')
-# api.add_resource(Comments, '/comments')
-# api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
-# api.add_resource(QuizContentResource, '/quizzes/<int:quiz_id>/content')
-# api.add_resource(QuizSubmissionResource, '/quizzes/<int:quiz_id>/submit')
-# api.add_resource(Challenges, '/challenge/<int:id>')
-# api.add_resource(Achievements, '/achievements')
+api.add_resource(LearningPaths, '/learning_paths')
+api.add_resource(LearningPathDetail, '/learning_path/<int:id>')
+api.add_resource(Modules, '/modules')
+api.add_resource(ModuleDetail, '/module/<int:id>')
+api.add_resource(Resources, '/resources')
+api.add_resource(ResourceDetail, '/resource/<int:id>')
+api.add_resource(Feedbacks, '/feedback')
+api.add_resource(Comments, '/comments')
+api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
+api.add_resource(QuizContentResource, '/quizzes/<int:quiz_id>/content')
+api.add_resource(QuizSubmissionResource, '/quizzes/<int:quiz_id>/submit')
+api.add_resource(Challenges, '/challenge/<int:id>')
+api.add_resource(Achievements, '/achievements')
 
 @app.route("/")
 def home():
