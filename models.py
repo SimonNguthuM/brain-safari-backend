@@ -40,6 +40,17 @@ class User(db.Model, UserMixin, SerializerMixin):
         db.session.commit()
         update_leaderboard(db, Leaderboard, self.id, self.points)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "role": self.role,
+            "points": self.points,
+            "date_joined": self.date_joined.isoformat(),
+            "leaderboard_entry_id": self.leaderboard_entry.id if self.leaderboard_entry else None
+        }
+
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"
 
@@ -56,6 +67,15 @@ class LearningPath(db.Model, SerializerMixin):
     modules = db.relationship('Module', back_populates='learning_path')
     enrolled_users = db.relationship('UserLearningPath', back_populates='learning_path')
     contributor = db.relationship('User', back_populates='contributed_paths')
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "contributor_id": self.contributor_id,
+            "rating": self.rating
+        }
 
     def __repr__(self):
         return f"<LearningPath(id={self.id}, title={self.title})>"
@@ -74,6 +94,14 @@ class Module(db.Model, SerializerMixin):
     challenges = db.relationship('Challenge', back_populates='module')
     quiz_content = db.relationship('QuizContent', back_populates='module')
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "learning_path_id": self.learning_path_id
+        }
+
     def __repr__(self):
         return f"<Module(id={self.id}, title={self.title})>"
 
@@ -91,6 +119,16 @@ class Resource(db.Model, SerializerMixin):
     feedbacks = db.relationship('Feedback', back_populates='resource')
     modules = db.relationship('ModuleResource', back_populates='resource')
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "url": self.url,
+            "type": self.type,
+            "description": self.description,
+            "contributor_id": self.contributor_id
+        }
+
     def __repr__(self):
         return f"<Resource(id={self.id}, title={self.title})>"
 
@@ -107,6 +145,15 @@ class Feedback(db.Model, SerializerMixin):
     user = db.relationship("User", back_populates="feedback")
     resource = db.relationship("Resource", back_populates="feedbacks")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "resource_id": self.resource.id,
+            "comment": self.comment,
+            "rating": self.rating
+        }
+
     def __repr__(self):
         return f"<Feedback(id={self.id}, user_id={self.user_id}, rating={self.rating})>"
 
@@ -121,6 +168,14 @@ class Comment(db.Model, SerializerMixin):
 
     user = db.relationship("User", back_populates="comments")
     replies = db.relationship("Reply", back_populates="comment")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "content": self.content,
+            "created_at": self.created_at.isoformat()
+        }
 
     def __repr__(self):
         return f"<Comment(id={self.id}, content='{self.content[:20]}...')>"
@@ -137,6 +192,15 @@ class Reply(db.Model, SerializerMixin):
 
     user = db.relationship("User", back_populates="replies")
     comment = db.relationship("Comment", back_populates="replies")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "comment_id": self.comment.id,
+            "content": self.content,
+            "created_at": self.created_at.isoformat()
+        }
 
     def __repr__(self):
         return f"<Reply(id={self.id}, content='{self.content[:20]}...')>"
@@ -156,6 +220,17 @@ class Challenge(db.Model, SerializerMixin):
     module = db.relationship("Module", back_populates="challenges")
     users = db.relationship("UserChallenge", back_populates="challenge")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "points_reward": self.points_reward,
+            "start_date": self.start_date.isoformat(),
+            "end_date": self.end_date.isoformat(),
+            "module_id": self.module_id
+        }
+
     def __repr__(self):
         return f"<Challenge(id={self.id}, title={self.title})>"
 
@@ -171,6 +246,15 @@ class Achievement(db.Model, SerializerMixin):
 
     users = db.relationship("UserAchievement", back_populates="achievement")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "icon_url": self.icon_url,
+            "points_required": self.points_required
+        }
+
     def __repr__(self):
         return f"<Achievement(id={self.id}, name={self.name})>"
 
@@ -183,6 +267,13 @@ class Leaderboard(db.Model, SerializerMixin):
     score = db.Column(db.Integer, default=0)
 
     user = db.relationship("User", back_populates="leaderboard_entry")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "score": self.score
+        }
 
     def __repr__(self):
         return f"<Leaderboard(id={self.id}, score={self.score})>"
@@ -199,6 +290,14 @@ class ModuleResource(db.Model, SerializerMixin):
     module = db.relationship("Module", back_populates="resources")
     resource = db.relationship("Resource", back_populates="modules")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "module_id": self.module_id,
+            "resource_id": self.resource_id,
+            "added_at": self.added_at.isoformat()
+        }
+
     def __repr__(self):
         return f"<ModuleResource(id={self.id})>"
 
@@ -213,6 +312,14 @@ class UserAchievement(db.Model, SerializerMixin):
 
     user = db.relationship("User", back_populates="achievements")
     achievement = db.relationship("Achievement", back_populates="users")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "achievement_id": self.achievement.id,
+            "earned_at": self.earned_at.isoformat()
+        }
 
     def __repr__(self):
         return f"<UserAchievement(id={self.id})>"
@@ -232,6 +339,17 @@ class UserLearningPath(db.Model, SerializerMixin):
     user = db.relationship("User", back_populates="enrolled_paths")
     learning_path = db.relationship("LearningPath", back_populates="enrolled_users")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "learning_path_id": self.learning_path.id,
+            "progress_percentage": self.progress_percentage,
+            "last_accessed": self.last_accessed.isoformat(),
+            "started_at": self.started_at.isoformat(),
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None
+        }
+
     def __repr__(self):
         return f"<UserLearningPath(id={self.id})>"
 
@@ -246,6 +364,14 @@ class UserChallenge(db.Model, SerializerMixin):
 
     user = db.relationship("User", back_populates="challenges")
     challenge = db.relationship("Challenge", back_populates="users")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "challenge_id": self.challenge.id,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None
+        }
 
     def __repr__(self):
         return f"<UserChallenge(id={self.id})>"
@@ -266,6 +392,17 @@ class QuizContent(db.Model, SerializerMixin):
     parent = db.relationship("QuizContent", remote_side=[id], back_populates="children")
     children = db.relationship("QuizContent", back_populates="parent")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "module_id": self.module_id,
+            "parent_id": self.parent_id,
+            "type": self.type,
+            "content_text": self.content_text,
+            "points": self.points,
+            "is_correct": self.is_correct
+        }
+
     def __repr__(self):
         return f"<QuizContent(id={self.id})>"
 
@@ -281,6 +418,15 @@ class QuizSubmission(db.Model, SerializerMixin):
 
     user = db.relationship("User", back_populates="quiz_submissions")
     quiz = db.relationship("QuizContent")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user.id,
+            "quiz_id": self.quiz.id,
+            "score": self.score,
+            "submitted_at": self.submitted_at.isoformat()
+        }
 
     def __repr__(self):
         return f"<QuizSubmission(id={self.id})>"
