@@ -88,29 +88,107 @@ class Logout(RestResource):
         session.clear()
         return {"message": "Logged out successfully"}
 
-class LearningPaths(RestResource):
-    def get(self):
-        return {"message": "All learning paths"}
+class EnrollLearningPath(RestResource):
+    @login_required
+    def post(self, learning_path_id):
+        """Allows a learner to enroll in a learning path."""
+        learning_path = LearningPath.query.get_or_404(learning_path_id)
+        
+        # Check if user is already enrolled
+        if UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=learning_path_id).first():
+            return {"message": "Already enrolled in this learning path"}, 200
+        
+        enrollment = UserLearningPath(user_id=current_user.id, learning_path_id=learning_path_id)
+        db.session.add(enrollment)
+        db.session.commit()
 
-class LearningPathDetail(RestResource):
-    def get(self, id):
-        return {"message": f"Learning path {id}"}
+        return {"message": f"Enrolled in {learning_path.name} successfully"}, 201
 
-class Modules(RestResource):
-    def get(self):
-        return {"message": "All modules"}
+# Access modules and resources only if the learner is enrolled
+class LearningPathModules(RestResource):
+    @login_required
+    def get(self, learning_path_id):
+        """Fetches all modules in an enrolled learning path for the learner."""
+        # Verify enrollment
+        if not UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=learning_path_id).first():
+            return {"message": "Enroll in the learning path first"}, 403
 
-class ModuleDetail(RestResource):
-    def get(self, id):
-        return {"message": f"Module {id}"}
+        modules = Module.query.filter_by(learning_path_id=learning_path_id).all()
+        return [{"id": module.id, "name": module.name} for module in modules], 200
 
-class Resources(RestResource):
-    def get(self):
-        return {"message": "All resources"}
+class ModuleResources(RestResource):
+    @login_required
+    def get(self, module_id):
+        """Fetches resources within a specific module."""
+        module = Module.query.get_or_404(module_id)
+        
+        # Ensure learner is enrolled in the learning path
+        if not UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=module.learning_path_id).first():
+            return {"message": "Enroll in the learning path first"}, 403
 
-class ResourceDetail(RestResource):
-    def get(self, id):
-        return {"message": f"Resource {id}"}
+        resources = Resource.query.filter_by(module_id=module_id).all()
+        return [{"id": resource.id, "title": resource.title} for resource in resources], 200
+
+# Contributor permission required for creating learning paths, modules, and resources
+def contributor_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'Contributor':
+            return jsonify({"error": "Contributor access required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+class CreateLearningPath(RestResource):
+    @contributor_required
+    def post(self):
+        """Allows a contributor to create a new learning path."""
+        data = request.json
+        name = data.get("name")
+        description = data.get("description")
+
+        if not name:
+            return {"message": "Name is required"}, 400
+
+        new_path = LearningPath(name=name, description=description)
+        db.session.add(new_path)
+        db.session.commit()
+
+        return {"message": f"Learning path {name} created successfully"}, 201
+
+class CreateModule(RestResource):
+    @contributor_required
+    def post(self, learning_path_id):
+        """Allows a contributor to create a module within a learning path."""
+        learning_path = LearningPath.query.get_or_404(learning_path_id)
+        data = request.json
+        name = data.get("name")
+
+        if not name:
+            return {"message": "Module name is required"}, 400
+
+        new_module = Module(name=name, learning_path_id=learning_path_id)
+        db.session.add(new_module)
+        db.session.commit()
+
+        return {"message": f"Module {name} created successfully under {learning_path.name}"}, 201
+
+class CreateResource(RestResource):
+    @contributor_required
+    def post(self, module_id):
+        """Allows a contributor to add a resource to a module."""
+        module = Module.query.get_or_404(module_id)
+        data = request.json
+        title = data.get("title")
+        content = data.get("content")
+
+        if not (title and content):
+            return {"message": "Title and content are required"}, 400
+
+        new_resource = Resource(title=title, content=content, module_id=module_id)
+        db.session.add(new_resource)
+        db.session.commit()
+
+        return {"message": f"Resource '{title}' created successfully in module '{module.name}'"}, 201
 
 
 # Feedback Routes
@@ -491,12 +569,12 @@ api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
 api.add_resource(UpdateRole, '/update_role')
 api.add_resource(Logout, '/logout')
-api.add_resource(LearningPaths, '/learning_paths')
-api.add_resource(LearningPathDetail, '/learning_path/<int:id>')
-api.add_resource(Modules, '/modules')
-api.add_resource(ModuleDetail, '/module/<int:id>')
-api.add_resource(Resources, '/resources')
-api.add_resource(ResourceDetail, '/resource/<int:id>')
+api.add_resource(EnrollLearningPath, '/learning_path/<int:learning_path_id>/enroll')
+api.add_resource(LearningPathModules, '/learning_path/<int:learning_path_id>/modules')
+api.add_resource(ModuleResources, '/module/<int:module_id>/resources')
+api.add_resource(CreateLearningPath, '/contributor/learning_path')
+api.add_resource(CreateModule, '/contributor/learning_path/<int:learning_path_id>/module')
+api.add_resource(CreateResource, '/contributor/module/<int:module_id>/resource')
 api.add_resource(Feedbacks, '/feedbacks')
 api.add_resource(FeedbackResource, '/feedback/<int:id>')
 api.add_resource(Comments, '/comments', '/comments/<int:comment_id>')
