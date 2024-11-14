@@ -3,6 +3,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from sqlalchemy_serializer import SerializerMixin
+from utils import update_leaderboard 
 
 class User(db.Model, UserMixin, SerializerMixin):
     __tablename__ = 'users'
@@ -10,17 +11,17 @@ class User(db.Model, UserMixin, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(50), nullable=False)  # Admin, Contributor, Learner
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(50), nullable=False)
     points = db.Column(db.Integer, default=0)
     date_joined = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     leaderboard_entry = db.relationship('Leaderboard', back_populates='user', uselist=False)
     feedback = db.relationship('Feedback', back_populates='user')
     comments = db.relationship('Comment', back_populates='user')
     replies = db.relationship('Reply', back_populates='user')
     enrolled_paths = db.relationship('UserLearningPath', back_populates='user')
+    contributed_paths = db.relationship('LearningPath', back_populates='contributor')
     challenges = db.relationship('UserChallenge', back_populates='user')
     achievements = db.relationship('UserAchievement', back_populates='user')
     quiz_submissions = db.relationship('QuizSubmission', back_populates='user')
@@ -37,7 +38,7 @@ class User(db.Model, UserMixin, SerializerMixin):
         """Add points to the user's score and update the leaderboard."""
         self.points += points
         db.session.commit()
-        update_leaderboard(self.id, self.points)
+        update_leaderboard(db, Leaderboard, self.id, self.points)
 
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"
@@ -52,10 +53,9 @@ class LearningPath(db.Model, SerializerMixin):
     contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     rating = db.Column(db.Integer)
 
-    # Relationships
     modules = db.relationship('Module', back_populates='learning_path')
     enrolled_users = db.relationship('UserLearningPath', back_populates='learning_path')
-    contributor = db.relationship('User', back_populates='enrolled_paths')
+    contributor = db.relationship('User', back_populates='contributed_paths')
 
     def __repr__(self):
         return f"<LearningPath(id={self.id}, title={self.title})>"
@@ -69,7 +69,6 @@ class Module(db.Model, SerializerMixin):
     description = db.Column(db.Text)
     learning_path_id = db.Column(db.Integer, db.ForeignKey('learning_paths.id'))
 
-    # Relationships
     learning_path = db.relationship('LearningPath', back_populates='modules')
     resources = db.relationship('ModuleResource', back_populates='module')
     challenges = db.relationship('Challenge', back_populates='module')
@@ -89,7 +88,6 @@ class Resource(db.Model, SerializerMixin):
     description = db.Column(db.Text)
     contributor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
-    # Relationships
     feedbacks = db.relationship('Feedback', back_populates='resource')
     modules = db.relationship('ModuleResource', back_populates='resource')
 
@@ -106,7 +104,6 @@ class Feedback(db.Model, SerializerMixin):
     comment = db.Column(db.Text)
     rating = db.Column(db.Integer)
 
-    # Relationships
     user = db.relationship("User", back_populates="feedback")
     resource = db.relationship("Resource", back_populates="feedbacks")
 
@@ -122,7 +119,6 @@ class Comment(db.Model, SerializerMixin):
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     user = db.relationship("User", back_populates="comments")
     replies = db.relationship("Reply", back_populates="comment")
 
@@ -139,7 +135,6 @@ class Reply(db.Model, SerializerMixin):
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     user = db.relationship("User", back_populates="replies")
     comment = db.relationship("Comment", back_populates="replies")
 
@@ -158,7 +153,6 @@ class Challenge(db.Model, SerializerMixin):
     end_date = db.Column(db.DateTime)
     module_id = db.Column(db.Integer, db.ForeignKey('modules.id'))
 
-    # Relationships
     module = db.relationship("Module", back_populates="challenges")
     users = db.relationship("UserChallenge", back_populates="challenge")
 
@@ -175,7 +169,6 @@ class Achievement(db.Model, SerializerMixin):
     icon_url = db.Column(db.String(200))
     points_required = db.Column(db.Integer)
 
-    # Relationships
     users = db.relationship("UserAchievement", back_populates="achievement")
 
     def __repr__(self):
@@ -189,7 +182,6 @@ class Leaderboard(db.Model, SerializerMixin):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     score = db.Column(db.Integer, default=0)
 
-    # Relationships
     user = db.relationship("User", back_populates="leaderboard_entry")
 
     def __repr__(self):
@@ -204,7 +196,6 @@ class ModuleResource(db.Model, SerializerMixin):
     resource_id = db.Column(db.Integer, db.ForeignKey('resources.id'), nullable=False)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     module = db.relationship("Module", back_populates="resources")
     resource = db.relationship("Resource", back_populates="modules")
 
@@ -220,7 +211,6 @@ class UserAchievement(db.Model, SerializerMixin):
     achievement_id = db.Column(db.Integer, db.ForeignKey('achievements.id'))
     earned_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     user = db.relationship("User", back_populates="achievements")
     achievement = db.relationship("Achievement", back_populates="users")
 
@@ -239,7 +229,6 @@ class UserLearningPath(db.Model, SerializerMixin):
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
 
-    # Relationships
     user = db.relationship("User", back_populates="enrolled_paths")
     learning_path = db.relationship("LearningPath", back_populates="enrolled_users")
 
@@ -255,7 +244,6 @@ class UserChallenge(db.Model, SerializerMixin):
     challenge_id = db.Column(db.Integer, db.ForeignKey('challenges.id'))
     completed_at = db.Column(db.DateTime)
 
-    # Relationships
     user = db.relationship("User", back_populates="challenges")
     challenge = db.relationship("Challenge", back_populates="users")
 
@@ -269,12 +257,11 @@ class QuizContent(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     module_id = db.Column(db.Integer, db.ForeignKey('modules.id'))
     parent_id = db.Column(db.Integer, db.ForeignKey('quiz_content.id'))
-    type = db.Column(db.String, nullable=False)  # "quiz", "question", or "option"
+    type = db.Column(db.String, nullable=False)
     content_text = db.Column(db.Text, nullable=False)
     points = db.Column(db.Integer)
     is_correct = db.Column(db.Boolean)
 
-    # Relationships
     module = db.relationship("Module", back_populates="quiz_content")
     parent = db.relationship("QuizContent", remote_side=[id], back_populates="children")
     children = db.relationship("QuizContent", back_populates="parent")
@@ -292,7 +279,6 @@ class QuizSubmission(db.Model, SerializerMixin):
     score = db.Column(db.Integer)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     user = db.relationship("User", back_populates="quiz_submissions")
     quiz = db.relationship("QuizContent")
 
