@@ -15,7 +15,7 @@ migrate = Migrate(app, db)
 api = Api(app)
 
 from models import (
-    User, LearningPath, Module, Resource, Feedback,
+    User, LearningPath, Module, Resource, Feedback,Comment,
     Reply, Challenge, Achievement, Leaderboard, ModuleResource,
     UserAchievement, UserLearningPath, UserChallenge,
     QuizContent, QuizSubmission
@@ -192,8 +192,151 @@ class FeedbackResource(RestResource):
         return {"message": "Feedback deleted successfully"}, 204
 
 class Comments(RestResource):
-    def get(self):
-        return {"message": "Comments"}
+   def post(self):
+       if 'user_id' not in session:
+           return {"message": "Unauthorized access"}, 401
+          
+       data = request.json
+       content = data.get('content')
+      
+       if not content:
+           return {"message": "Content is required"}, 400
+      
+       new_comment = Comment(
+           content=content,
+           user_id=session['user_id']
+       )
+       db.session.add(new_comment)
+       db.session.commit()
+      
+       return {
+           "message": "Comment added successfully",
+           "comment": new_comment.to_dict()
+       }, 201
+
+
+   def get(self):
+       comments = Comment.query.all()
+       return {
+           'comments': [comment.to_dict() for comment in comments]
+       }, 200
+  
+   def put(self, comment_id):
+       if 'user_id' not in session:
+           return {"message": "Unauthorized access"}, 401
+          
+       comment = Comment.query.get_or_404(comment_id)
+      
+     
+       if comment.user_id != session['user_id']:
+           return {"message": "Unauthorized to edit this comment"}, 403
+          
+       data = request.json
+       if not data or not data.get('content'):
+           return {'message': 'Content is required'}, 400
+      
+       comment.content = data['content']
+       db.session.commit()
+
+
+       return {
+           'message': 'Comment updated successfully',
+           'comment': comment.to_dict()
+       }, 200
+  
+   def delete(self, comment_id):
+       if 'user_id' not in session:
+           return {"message": "Unauthorized access"}, 401
+          
+       comment = Comment.query.get_or_404(comment_id)
+      
+      
+       if comment.user_id != session['user_id']:
+           return {"message": "Unauthorized to delete this comment"}, 403
+          
+       db.session.delete(comment)
+       db.session.commit()
+
+
+       return {'message': 'Comment deleted successfully'}, 204
+   
+
+class Replies(RestResource):
+   def post(self, comment_id):
+       if 'user_id' not in session:
+           return {"message": "Unauthorized access"}, 401
+          
+       comment = Comment.query.get_or_404(comment_id)
+       data = request.json
+      
+       if not data or not data.get('content'):
+           return {"message": "Content is required"}, 400
+      
+       new_reply = Reply(
+           content=data['content'],
+           user_id=session['user_id'],
+           comment_id=comment_id
+       )
+       db.session.add(new_reply)
+       db.session.commit()
+
+
+       return {
+           'message': 'Reply added successfully',
+           'reply': new_reply.to_dict()
+       }, 201
+  
+   def get(self, comment_id):
+       comment = Comment.query.get_or_404(comment_id)
+       return {
+           'comment_id': comment_id,
+           'replies': [reply.to_dict() for reply in comment.replies]
+       }, 200
+  
+   def put(self, comment_id, reply_id):
+       if 'user_id' not in session:
+           return {"message": "Unauthorized access"}, 401
+          
+       reply = Reply.query.filter_by(
+           comment_id=comment_id,
+           id=reply_id
+       ).first_or_404()
+      
+      
+       if reply.user_id != session['user_id']:
+           return {"message": "Unauthorized to edit this reply"}, 403
+          
+       data = request.json
+       if not data or not data.get('content'):
+           return {'message': 'Content is required'}, 400
+      
+       reply.content = data['content']
+       db.session.commit()
+
+
+       return {
+           'message': 'Reply updated successfully',
+           'reply': reply.to_dict()
+       }, 200
+  
+   def delete(self, comment_id, reply_id):
+       if 'user_id' not in session:
+           return {"message": "Unauthorized access"}, 401
+          
+       reply = Reply.query.filter_by(
+           comment_id=comment_id,
+           id=reply_id
+       ).first_or_404()
+      
+      
+       if reply.user_id != session['user_id']:
+           return {"message": "Unauthorized to delete this reply"}, 403
+          
+       db.session.delete(reply)
+       db.session.commit()
+
+
+       return {'message': 'Reply deleted successfully'}, 204
 
 # Route for accessing quizzes within a module
 class Quizzes(RestResource):
@@ -356,7 +499,8 @@ api.add_resource(Resources, '/resources')
 api.add_resource(ResourceDetail, '/resource/<int:id>')
 api.add_resource(Feedbacks, '/feedbacks')
 api.add_resource(FeedbackResource, '/feedback/<int:id>')
-api.add_resource(Comments, '/comments')
+api.add_resource(Comments, '/comments', '/comments/<int:comment_id')
+api.add_resource(Replies, '/comments/<int:comment_id>/replies')
 api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
 api.add_resource(QuizContent, '/quizzes/<int:quiz_id>/content')
 api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
