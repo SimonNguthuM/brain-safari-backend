@@ -17,6 +17,7 @@ psycopg = "*"
 sqlalchemy-serializer = "*"
 flask-login = "*"
 alembic = "*"
+faker = "*"
 
 [dev-packages]
 
