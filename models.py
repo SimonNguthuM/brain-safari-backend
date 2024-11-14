@@ -122,6 +122,15 @@ class Comment(db.Model, SerializerMixin):
     user = db.relationship("User", back_populates="comments")
     replies = db.relationship("Reply", back_populates="comment")
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'user_id':self.user_id,
+            'created_at': self.created_at.isoformat(),
+            'replies': [reply.to_dict() for reply in self.replies]
+        }
+
     def __repr__(self):
         return f"<Comment(id={self.id}, content='{self.content[:20]}...')>"
 
@@ -138,6 +147,13 @@ class Reply(db.Model, SerializerMixin):
     user = db.relationship("User", back_populates="replies")
     comment = db.relationship("Comment", back_populates="replies")
 
+    def to_dict(self) :
+        return {
+            'id': self.id,
+            'content': self.content,
+            'user_id':self.user_id,
+            'created_at': self.created_at.isoformat()
+        }
     def __repr__(self):
         return f"<Reply(id={self.id}, content='{self.content[:20]}...')>"
 
