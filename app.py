@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import Flask, request, jsonify, session
-from flask_login import current_user, login_required
+from flask_login import current_user, login_required, LoginManager
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
 from config import Config
@@ -14,12 +14,22 @@ db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+login_manager.login_view = 'login'
+
 from models import (
     User, LearningPath, Module, Resource, Feedback,Comment,
     Reply, Challenge, Achievement, Leaderboard, ModuleResource,
     UserAchievement, UserLearningPath, UserChallenge,
     QuizContent, QuizSubmission
 )
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 class Signup(RestResource):
     def post(self):
@@ -87,6 +97,12 @@ class Logout(RestResource):
     def post(self):
         session.clear()
         return {"message": "Logged out successfully"}
+    
+class AllLearningPaths(RestResource):
+    def get(self):
+        """Fetches all learning paths."""
+        learning_paths = LearningPath.query.all()
+        return [{"id": path.id, "name": path.title, "description": path.description} for path in learning_paths], 200
 
 class EnrollLearningPath(RestResource):
     @login_required
@@ -193,14 +209,6 @@ class CreateResource(RestResource):
 
 # Feedback Routes
 # decorator function to wrap the Feedback function
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'admin':
-            return jsonify({"error": "Admin access required"}), 403
-        return f(*args, **kwargs)
-    return decorated_function
-
 class Feedbacks(RestResource): 
     """Resource for handling feedback collection."""
     def get(self):
@@ -569,6 +577,7 @@ api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
 api.add_resource(UpdateRole, '/update_role')
 api.add_resource(Logout, '/logout')
+api.add_resource(AllLearningPaths, '/learning_paths')
 api.add_resource(EnrollLearningPath, '/learning_path/<int:learning_path_id>/enroll')
 api.add_resource(LearningPathModules, '/learning_path/<int:learning_path_id>/modules')
 api.add_resource(ModuleResources, '/module/<int:module_id>/resources')
