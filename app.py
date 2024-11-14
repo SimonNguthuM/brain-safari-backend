@@ -1,3 +1,4 @@
+from functools import wraps
 from flask import Flask, request, jsonify, session
 from flask_login import current_user, login_required
 from flask_restful import Resource as RestResource, Api 
@@ -111,8 +112,18 @@ class ResourceDetail(RestResource):
     def get(self, id):
         return {"message": f"Resource {id}"}
 
-class Feedbacks(RestResource):
-   
+
+# Feedback Routes
+# decorator function to wrap the Feedback function
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+class Feedbacks(RestResource): 
     """Resource for handling feedback collection."""
     def get(self):
         """Fetches all feedback entries."""
@@ -247,9 +258,72 @@ class QuizSubmission(RestResource):
             "submitted_at": submission.submitted_at
         })
 
+# challenge Routes
+# decorator fumction to wrap the challenge function
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 class Challenges(RestResource):
-    def get(self, id):
-        return {"message": f"Challenge {id}"}
+    def get(self, challenge_id):
+        """Allows users to view challenge details."""
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+        return challenge.to_dict(), 200
+
+    @admin_required
+    def put(self, challenge_id):
+        """Allows admin to update challenge details."""
+        data = request.get_json()
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+        try:
+            for key, value in data.items():
+                setattr(challenge, key, value)
+            db.session.commit()
+            return challenge.to_dict(), 200
+        except Exception as e:
+            db.session.rollback()
+            return {"error": "Challenge update failed", "message": str(e)}, 400
+
+    @admin_required
+    def delete(self, challenge_id):
+        """Allows admin to delete a challenge."""
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+        db.session.delete(challenge)
+        db.session.commit()
+        return {"message": "Challenge deleted successfully"}, 204
+
+    @login_required
+    def post(self, challenge_id):
+        """Allows a logged-in user to mark a challenge as completed."""
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+
+        # Check if user has already marked it as completed
+        user_challenge = UserChallenge.query.filter_by(user_id=current_user.id, challenge_id=challenge_id).first()
+        if user_challenge and user_challenge.completed:
+            return {"message": "Challenge already marked as completed"}, 200
+
+        # Mark challenge as completed
+        if not user_challenge:
+            user_challenge = UserChallenge(user_id=current_user.id, challenge_id=challenge_id, completed=True)
+            db.session.add(user_challenge)
+        else:
+            user_challenge.completed = True
+
+        db.session.commit()
+        return {"message": "Challenge marked as completed"}, 200
+
 
 # class Achievements(Resource):
 #     def get(self, user_id):
@@ -280,7 +354,7 @@ api.add_resource(Modules, '/modules')
 api.add_resource(ModuleDetail, '/module/<int:id>')
 api.add_resource(Resources, '/resources')
 api.add_resource(ResourceDetail, '/resource/<int:id>')
-api.add_resource(Feedbacks, '/feedback')
+api.add_resource(Feedbacks, '/feedbacks')
 api.add_resource(FeedbackResource, '/feedback/<int:id>')
 api.add_resource(Comments, '/comments')
 api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
