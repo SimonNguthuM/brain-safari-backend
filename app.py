@@ -1,4 +1,6 @@
+from functools import wraps
 from flask import Flask, request, jsonify, session
+from flask_login import current_user, login_required
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
 from config import Config
@@ -110,9 +112,84 @@ class ResourceDetail(RestResource):
     def get(self, id):
         return {"message": f"Resource {id}"}
 
-class Feedbacks(RestResource):
+
+# Feedback Routes
+# decorator function to wrap the Feedback function
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+class Feedbacks(RestResource): 
+    """Resource for handling feedback collection."""
     def get(self):
-        return {"message": "Feedbacks"}
+        """Fetches all feedback entries."""
+        feedback_list = Feedback.query.all()
+        return [feedback.to_dict() for feedback in feedback_list], 200
+
+    @login_required
+    def post(self):
+        """Creates new feedback for a specific resource."""
+        data = request.json
+        content = data.get("content")
+        resource_id = data.get("resource_id")
+
+        if not content or not resource_id:
+            return {"message": "Content and resource_id are required"}, 400
+
+        # Create new feedback
+        feedback = Feedback(content=content, resource_id=resource_id, user_id=current_user.id)
+        db.session.add(feedback)
+        db.session.commit()
+
+        return {"message": "Feedback submitted successfully", "feedback_id": feedback.id}, 201
+
+
+class FeedbackResource(RestResource):
+    """Resource for handling individual feedback actions."""
+    def get(self, feedback_id):
+        """Fetches feedback by ID."""
+        feedback = Feedback.query.get(feedback_id)
+        if not feedback:
+            return {"message": "Feedback not found"}, 404
+        return feedback.to_dict(), 200
+
+    @login_required
+    def put(self, feedback_id):
+        """Updates the user's feedback."""
+        data = request.json
+        feedback = Feedback.query.get(feedback_id)
+        if not feedback:
+            return {"message": "Feedback not found"}, 404
+
+        # Ensure the feedback is owned by the current user or is updated by an admin
+        if feedback.user_id != current_user.id and current_user.role != "Admin":
+            return {"message": "You are not authorized to update this feedback"}, 403
+
+        # Update feedback
+        feedback.content = data.get("content", feedback.content)
+        db.session.commit()
+
+        return {"message": "Feedback updated successfully", "feedback": feedback.to_dict()}, 200
+
+    @login_required
+    def delete(self, feedback_id):
+        """Deletes the user's feedback."""
+        feedback = Feedback.query.get(feedback_id)
+        if not feedback:
+            return {"message": "Feedback not found"}, 404
+
+        # Ensure the feedback is owned by the current user or is deleted by an admin
+        if feedback.user_id != current_user.id and current_user.role != "Admin":
+            return {"message": "You are not authorized to delete this feedback"}, 403
+
+        db.session.delete(feedback)
+        db.session.commit()
+
+        return {"message": "Feedback deleted successfully"}, 204
 
 class Comments(RestResource):
     def post(self):
@@ -138,141 +215,156 @@ class Comments(RestResource):
         }, 201
 
     def get(self):
-        comments = Comment.query.all()
-        return {
-            'comments': [comment.to_dict() for comment in comments]
-        }, 200
-    
-    def put(self, comment_id):
-        if 'user_id' not in session:
-            return {"message": "Unauthorized access"}, 401
-            
-        comment = Comment.query.get_or_404(comment_id)
-        
-       
-        if comment.user_id != session['user_id']:
-            return {"message": "Unauthorized to edit this comment"}, 403
-            
-        data = request.json
-        if not data or not data.get('content'):
-            return {'message': 'Content is required'}, 400
-        
-        comment.content = data['content']
-        db.session.commit()
+        return {"message": "Comments"}
 
-        return {
-            'message': 'Comment updated successfully',
-            'comment': comment.to_dict()
-        }, 200
-    
-    def delete(self, comment_id):
-        if 'user_id' not in session:
-            return {"message": "Unauthorized access"}, 401
-            
-        comment = Comment.query.get_or_404(comment_id)
-        
-        
-        if comment.user_id != session['user_id']:
-            return {"message": "Unauthorized to delete this comment"}, 403
-            
-        db.session.delete(comment)
-        db.session.commit()
-
-        return {'message': 'Comment deleted successfully'}, 204
-
-class Replies(RestResource):
-    def post(self, comment_id):
-        if 'user_id' not in session:
-            return {"message": "Unauthorized access"}, 401
-            
-        comment = Comment.query.get_or_404(comment_id)
-        data = request.json
-        
-        if not data or not data.get('content'):
-            return {"message": "Content is required"}, 400
-        
-        new_reply = Reply(
-            content=data['content'],
-            user_id=session['user_id'],
-            comment_id=comment_id
-        )
-        db.session.add(new_reply)
-        db.session.commit()
-
-        return {
-            'message': 'Reply added successfully',
-            'reply': new_reply.to_dict()
-        }, 201
-    
-    def get(self, comment_id):
-        comment = Comment.query.get_or_404(comment_id)
-        return {
-            'comment_id': comment_id,
-            'replies': [reply.to_dict() for reply in comment.replies]
-        }, 200
-    
-    def put(self, comment_id, reply_id):
-        if 'user_id' not in session:
-            return {"message": "Unauthorized access"}, 401
-            
-        reply = Reply.query.filter_by(
-            comment_id=comment_id,
-            id=reply_id
-        ).first_or_404()
-        
-        
-        if reply.user_id != session['user_id']:
-            return {"message": "Unauthorized to edit this reply"}, 403
-            
-        data = request.json
-        if not data or not data.get('content'):
-            return {'message': 'Content is required'}, 400
-        
-        reply.content = data['content']
-        db.session.commit()
-
-        return {
-            'message': 'Reply updated successfully',
-            'reply': reply.to_dict()
-        }, 200
-    
-    def delete(self, comment_id, reply_id):
-        if 'user_id' not in session:
-            return {"message": "Unauthorized access"}, 401
-            
-        reply = Reply.query.filter_by(
-            comment_id=comment_id,
-            id=reply_id
-        ).first_or_404()
-        
-        
-        if reply.user_id != session['user_id']:
-            return {"message": "Unauthorized to delete this reply"}, 403
-            
-        db.session.delete(reply)
-        db.session.commit()
-
-        return {'message': 'Reply deleted successfully'}, 204
-
+# Route for accessing quizzes within a module
 class Quizzes(RestResource):
-    def get(self):
-        return {"message": "Quizes"}
+    def get(self, module_id):
+        quizzes = QuizContent.query.filter_by(module_id=module_id, type="quiz").all()
+        return jsonify([
+            {
+                "id": quiz.id,
+                "title": quiz.content_text, 
+                "points": quiz.points,
+                "created_at": quiz.created_at
+            } for quiz in quizzes
+        ])
+# Route for accessing quiz questions and options
+class QuizContent(RestResource):
+    def get(self, quiz_id):
+        quiz_content = QuizContent.query.filter_by(parent_id=quiz_id).all()
+        return jsonify([
+            {
+                "id": content.id,
+                "type": content.type,
+                "content_text": content.content_text,
+                "points": content.points,
+                "is_correct": content.is_correct,
+                "created_at": content.created_at
+            } for content in quiz_content
+        ])
 
-class QuizContentResource(RestResource):
-    def get(self, id):
-        return {"message": f"Quiz {id}"}
+# Route for submitting a quiz and viewing the score
+class QuizSubmission(RestResource):
+    def post(self, quiz_id):
+        data = request.json
+        user_id = data.get("user_id")
+        user_answers = data.get("answers")
 
-class QuizSubmissionResource(RestResource):
-    def get(self, id):
-        return {"message": f"Quiz {id}"}
+        if not user_id or not user_answers:
+            return jsonify({"error": "user_id and answers are required"}), 400  
+        
+        score = 0
+        for answer_id in user_answers:
+            answer = QuizContent.query.get(answer_id)
+            if answer and answer.is_correct:
+                score += answer.points or 0
+
+        submission = QuizSubmission(
+            user_id=user_id,
+            quiz_id=quiz_id,
+            score=score,
+            submitted_at=datetime.utcnow()
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        return jsonify({"quiz_id": quiz_id, "score": score, "submitted_at": submission.submitted_at})
+
+    def get(self, quiz_id, user_id):
+        submission = QuizSubmission.query.filter_by(quiz_id=quiz_id, user_id=user_id).first_or_404()
+        return jsonify({
+            "quiz_id": submission.quiz_id,
+            "user_id": submission.user_id,
+            "score": submission.score,
+            "submitted_at": submission.submitted_at
+        })
+
+# challenge Routes
+# decorator fumction to wrap the challenge function
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 class Challenges(RestResource):
-    def get(self, id):
-        return {"message": f"Challenge {id}"}
+    def get(self, challenge_id):
+        """Allows users to view challenge details."""
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+        return challenge.to_dict(), 200
 
-class Achievements(RestResource):
-    def get(self):
-        return {"message": "achievement"}
+    @admin_required
+    def put(self, challenge_id):
+        """Allows admin to update challenge details."""
+        data = request.get_json()
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+        try:
+            for key, value in data.items():
+                setattr(challenge, key, value)
+            db.session.commit()
+            return challenge.to_dict(), 200
+        except Exception as e:
+            db.session.rollback()
+            return {"error": "Challenge update failed", "message": str(e)}, 400
+
+    @admin_required
+    def delete(self, challenge_id):
+        """Allows admin to delete a challenge."""
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+        db.session.delete(challenge)
+        db.session.commit()
+        return {"message": "Challenge deleted successfully"}, 204
+
+    @login_required
+    def post(self, challenge_id):
+        """Allows a logged-in user to mark a challenge as completed."""
+        challenge = Challenge.query.get(challenge_id)
+        if not challenge:
+            return {"error": "Challenge not found"}, 404
+
+        # Check if user has already marked it as completed
+        user_challenge = UserChallenge.query.filter_by(user_id=current_user.id, challenge_id=challenge_id).first()
+        if user_challenge and user_challenge.completed:
+            return {"message": "Challenge already marked as completed"}, 200
+
+        # Mark challenge as completed
+        if not user_challenge:
+            user_challenge = UserChallenge(user_id=current_user.id, challenge_id=challenge_id, completed=True)
+            db.session.add(user_challenge)
+        else:
+            user_challenge.completed = True
+
+        db.session.commit()
+        return {"message": "Challenge marked as completed"}, 200
+
+
+# class Achievements(Resource):
+#     def get(self, user_id):
+#         # Query all achievements related to a specific user
+#         user_achievements = UserAchievement.query.filter_by(user_id=user_id).all()
+        
+        
+#         achievements = [
+#             {
+#                 "id": achievement.achievement.id,
+#                 "name": achievement.achievement.name,
+#                 "description": achievement.achievement.description,
+#                 "icon_url": achievement.achievement.icon_url,
+#                 "points_required": achievement.achievement.points_required
+#             }
+#             for achievement in user_achievements
+#         ]
+        
+#         return jsonify(achievements)
 
 api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
@@ -284,14 +376,14 @@ api.add_resource(Modules, '/modules')
 api.add_resource(ModuleDetail, '/module/<int:id>')
 api.add_resource(Resources, '/resources')
 api.add_resource(ResourceDetail, '/resource/<int:id>')
-api.add_resource(Feedbacks, '/feedback')
-api.add_resource(Comments, '/comments', '/comments/<int:comment_id>')
-api.add_resource(Replies, '/comments/<int:comment_id>/replies', '/comments/<int:comment_id>/replies/<int:reply_id>')
+api.add_resource(Feedbacks, '/feedbacks')
+api.add_resource(FeedbackResource, '/feedback/<int:id>')
+api.add_resource(Comments, '/comments')
 api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
-api.add_resource(QuizContentResource, '/quizzes/<int:quiz_id>/content')
-api.add_resource(QuizSubmissionResource, '/quizzes/<int:quiz_id>/submit')
+api.add_resource(QuizContent, '/quizzes/<int:quiz_id>/content')
+api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
 api.add_resource(Challenges, '/challenge/<int:id>')
-api.add_resource(Achievements, '/achievements')
+# api.add_resource(Achievements, '/users/<int:user_id>/achievements')
 
 @app.route("/")
 def home():
