@@ -30,11 +30,9 @@ class Signup(RestResource):
         if not (username and email and password):
             return {"message": "All fields are required"}, 400
 
-        # Check if user already exists
         if User.query.filter_by(email=email).first():
             return {"message": "User with this email already exists"}, 400
 
-        # Create a new user with default 'Learner' role
         new_user = User(username=username, email=email, role='Learner')
         new_user.set_password(password)
         db.session.add(new_user)
@@ -51,8 +49,8 @@ class Login(RestResource):
 
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
-            session['user_id'] = user.id  # Store user ID in the session
-            session['username'] = user.username  # Optionally store more user data
+            session['user_id'] = user.id
+            session['username'] = user.username
             return {"message": "Login successful", "user": user.username}, 200
         else:
             return {"message": "Invalid email or password"}, 401
@@ -85,18 +83,8 @@ class UpdateRole(RestResource):
 
 class Logout(RestResource):
     def post(self):
-        session.clear()  # Clear all session data
+        session.clear()
         return {"message": "Logged out successfully"}
-
-def update_leaderboard(user_id, new_score):
-    """Update the leaderboard score for the given user."""
-    leaderboard_entry = Leaderboard.query.filter_by(user_id=user_id).first()
-    if leaderboard_entry:
-        leaderboard_entry.score = new_score  # Update existing entry
-    else:
-        leaderboard_entry = Leaderboard(user_id=user_id, score=new_score)  # Create new entry if not exists
-        db.session.add(leaderboard_entry)
-    db.session.commit()
 
 class LearningPaths(RestResource):
     def get(self):
