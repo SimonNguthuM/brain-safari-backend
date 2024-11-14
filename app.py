@@ -554,24 +554,24 @@ class Challenges(RestResource):
         return {"message": "Challenge marked as completed"}, 200
 
 
-# class Achievements(Resource):
-#     def get(self, user_id):
-#         # Query all achievements related to a specific user
-#         user_achievements = UserAchievement.query.filter_by(user_id=user_id).all()
+class Achievements(RestResource):
+    def get(self, user_id):
+        # Query all achievements related to a specific user
+        user_achievements = UserAchievement.query.filter_by(user_id=user_id).all()
         
         
-#         achievements = [
-#             {
-#                 "id": achievement.achievement.id,
-#                 "name": achievement.achievement.name,
-#                 "description": achievement.achievement.description,
-#                 "icon_url": achievement.achievement.icon_url,
-#                 "points_required": achievement.achievement.points_required
-#             }
-#             for achievement in user_achievements
-#         ]
+        achievements = [
+            {
+                "id": achievement.achievement.id,
+                "name": achievement.achievement.name,
+                "description": achievement.achievement.description,
+                "icon_url": achievement.achievement.icon_url,
+                "points_required": achievement.achievement.points_required
+            }
+            for achievement in user_achievements
+        ]
         
-#         return jsonify(achievements)
+        return jsonify(achievements)
 
 api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
@@ -592,7 +592,7 @@ api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
 api.add_resource(QuizContent, '/quizzes/<int:quiz_id>/content')
 api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
 api.add_resource(Challenges, '/challenge/<int:id>')
-# api.add_resource(Achievements, '/users/<int:user_id>/achievements')
+api.add_resource(Achievements, '/users/<int:user_id>/achievements')
 
 @app.route("/")
 def home():
