@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, session
+from flask_login import current_user, login_required
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
 from config import Config
@@ -111,8 +112,73 @@ class ResourceDetail(RestResource):
         return {"message": f"Resource {id}"}
 
 class Feedbacks(RestResource):
+   
+    """Resource for handling feedback collection."""
     def get(self):
-        return {"message": "Feedbacks"}
+        """Fetches all feedback entries."""
+        feedback_list = Feedback.query.all()
+        return [feedback.to_dict() for feedback in feedback_list], 200
+
+    @login_required
+    def post(self):
+        """Creates new feedback for a specific resource."""
+        data = request.json
+        content = data.get("content")
+        resource_id = data.get("resource_id")
+
+        if not content or not resource_id:
+            return {"message": "Content and resource_id are required"}, 400
+
+        # Create new feedback
+        feedback = Feedback(content=content, resource_id=resource_id, user_id=current_user.id)
+        db.session.add(feedback)
+        db.session.commit()
+
+        return {"message": "Feedback submitted successfully", "feedback_id": feedback.id}, 201
+
+
+class FeedbackResource(RestResource):
+    """Resource for handling individual feedback actions."""
+    def get(self, feedback_id):
+        """Fetches feedback by ID."""
+        feedback = Feedback.query.get(feedback_id)
+        if not feedback:
+            return {"message": "Feedback not found"}, 404
+        return feedback.to_dict(), 200
+
+    @login_required
+    def put(self, feedback_id):
+        """Updates the user's feedback."""
+        data = request.json
+        feedback = Feedback.query.get(feedback_id)
+        if not feedback:
+            return {"message": "Feedback not found"}, 404
+
+        # Ensure the feedback is owned by the current user or is updated by an admin
+        if feedback.user_id != current_user.id and current_user.role != "Admin":
+            return {"message": "You are not authorized to update this feedback"}, 403
+
+        # Update feedback
+        feedback.content = data.get("content", feedback.content)
+        db.session.commit()
+
+        return {"message": "Feedback updated successfully", "feedback": feedback.to_dict()}, 200
+
+    @login_required
+    def delete(self, feedback_id):
+        """Deletes the user's feedback."""
+        feedback = Feedback.query.get(feedback_id)
+        if not feedback:
+            return {"message": "Feedback not found"}, 404
+
+        # Ensure the feedback is owned by the current user or is deleted by an admin
+        if feedback.user_id != current_user.id and current_user.role != "Admin":
+            return {"message": "You are not authorized to delete this feedback"}, 403
+
+        db.session.delete(feedback)
+        db.session.commit()
+
+        return {"message": "Feedback deleted successfully"}, 204
 
 class Comments(RestResource):
     def get(self):
