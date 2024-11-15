@@ -576,6 +576,26 @@ class Achievements(RestResource):
         
         return jsonify(achievements)
 
+class UserProfile(RestResource):
+    @login_required
+    def get(self):
+        """Fetches the profile details of the currently logged-in user."""
+        user_id = current_user.id
+        user = User.query.get(user_id)
+        
+        if not user:
+            return {"message": "User not found"}, 404
+
+        profile_data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+        }
+        return profile_data, 200
+
+
+api.add_resource(UserProfile, '/profile')
 api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
 api.add_resource(UpdateRole, '/update_role')
