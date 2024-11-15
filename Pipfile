@@ -18,6 +18,7 @@ sqlalchemy-serializer = "*"
 flask-login = "*"
 alembic = "*"
 faker = "*"
+flask-session = "*"
 
 [dev-packages]
 

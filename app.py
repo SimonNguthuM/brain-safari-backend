@@ -4,12 +4,15 @@ from flask_login import current_user, login_required, LoginManager
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_session import Session
 from config import Config
 from db import db
 from datetime import datetime
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+Session(app)
 
 CORS(app)
 
