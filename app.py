@@ -580,7 +580,6 @@ class Achievements(RestResource):
         return jsonify(achievements)
 
 class UserProfile(RestResource):
-    @login_required
     def get(self):
         """Fetches the profile details of the currently logged-in user."""
         user_id = current_user.id
