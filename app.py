@@ -4,7 +4,6 @@ from flask_login import current_user, login_required, LoginManager
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_session import Session
 from config import Config
 from db import db
 from datetime import datetime
@@ -12,9 +11,7 @@ from datetime import datetime
 app = Flask(__name__)
 app.config.from_object(Config)
 
-Session(app)
-
-CORS(app)
+CORS(app, supports_credentials=True)
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -579,25 +576,6 @@ class Achievements(RestResource):
         
         return jsonify(achievements)
 
-class UserProfile(RestResource):
-    def get(self):
-        """Fetches the profile details of the currently logged-in user."""
-        user_id = current_user.id
-        user = User.query.get(user_id)
-        
-        if not user:
-            return {"message": "User not found"}, 404
-
-        profile_data = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,
-        }
-        return profile_data, 200
-
-
-api.add_resource(UserProfile, '/profile')
 api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
 api.add_resource(UpdateRole, '/update_role')
