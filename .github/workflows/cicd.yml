@@ -90,6 +90,12 @@ jobs:
         run: |
           flask db migrate -m "Auto migration from GitHub Actions" || echo "No migration necessary"
           flask db upgrade
+          
+      - name: Seed Database
+        env:
+          DATABASE_URL: ${{ secrets.POSTGRES_URL }}
+        run: |
+          python seed.py || echo "Seeding not necessary or failed"
 
       - name: Deploy to Render
         env:
