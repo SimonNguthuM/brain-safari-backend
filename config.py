@@ -9,4 +9,5 @@ class Config:
     SESSION_COOKIE_SAMESITE = "None"  # Required for cross-origin cookies
     SESSION_COOKIE_SECURE = True     # Ensures cookies are sent over HTTPS
 
-    STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'build')
+    # STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'build', 'static')
+    # TEMPLATES_AUTO_RELOAD = True

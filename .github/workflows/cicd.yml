@@ -90,7 +90,7 @@ jobs:
         run: |
           flask db migrate -m "Auto migration from GitHub Actions" || echo "No migration necessary"
           flask db upgrade
-          
+
       # - name: Seed Database
       #   env:
       #     DATABASE_URL: ${{ secrets.POSTGRES_URL }}
@@ -110,3 +110,7 @@ jobs:
                   "DATABASE_URL": "$POSTGRES_URL"
                 }
               }'
+
+      - name: Start Flask app with Gunicorn
+        run: |
+          gunicorn -b 0.0.0.0:5000 app:app
