@@ -5,6 +5,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')  
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Secure session cookie settings
-    SESSION_COOKIE_SAMESITE = "None"  # Required for cross-origin cookies
-    SESSION_COOKIE_SECURE = True     # Ensures cookies are sent over HTTPS
+    SESSION_COOKIE_SAMESITE = "None"  
+    SESSION_COOKIE_SECURE = True    
+
+    STATIC_FOLDER = os.path.join(os.getcwd(), 'build')
