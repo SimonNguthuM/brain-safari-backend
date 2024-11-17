@@ -11,4 +11,4 @@ class Config:
     SESSION_COOKIE_SAMESITE = "None"  
     SESSION_COOKIE_SECURE = True    
 
-    STATIC_FOLDER = os.path.join(os.getcwd(), 'frontend', 'build')
+    STATIC_FOLDER = os.path.join(os.getcwd(), 'frontend/build')

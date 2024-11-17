@@ -45,22 +45,16 @@ def serve_react_app(path):
     static_folder = app.config['STATIC_FOLDER']
     index_path = os.path.join(static_folder, 'index.html')
 
-    # Log directory contents if needed
     app.logger.debug(f"STATIC_FOLDER: {static_folder}")
     if os.path.exists(static_folder):
         app.logger.debug(f"Directory Contents: {os.listdir(static_folder)}")
     else:
         app.logger.debug("STATIC_FOLDER does not exist")
 
-    # Serve static files if they exist
-    if path and os.path.exists(os.path.join(static_folder, 'static', path)):
-        return send_from_directory(os.path.join(static_folder, 'static'), path)
-    
-    # Serve index.html for any non-matching paths
+    if path and os.path.exists(os.path.join(static_folder, path)):
+        return send_from_directory(static_folder, path)
     elif os.path.exists(index_path):
         return send_from_directory(static_folder, 'index.html')
-
-    # If build files not found, return 404
     else:
         return "React build not found", 404
     

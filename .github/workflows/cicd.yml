@@ -25,7 +25,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
-
+          
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -35,7 +35,7 @@ jobs:
         with:
           repository: 'SimonNguthuM/brain-safari-frontend'
           token: ${{ secrets.GITHUB_TOKEN }}
-          path: frontend
+          path: frontend 
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -103,9 +103,8 @@ jobs:
         run: |
           flask db migrate -m "Auto migration from GitHub Actions" || echo "No migration necessary"
           flask db upgrade
-
-      # Optional Seeding
-      # - name: Seed Database
+          
+       # - name: Seed Database
       #   env:
       #     DATABASE_URL: ${{ secrets.POSTGRES_URL }}
       #   run: |
@@ -116,15 +115,11 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
-          response=$(curl -X POST "https://api.render.com/v1/services/srv-csossa1u0jms738pdbfg/deploys" \
+          curl -X POST "https://api.render.com/v1/services/srv-csossa1u0jms738pdbfg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY" \
           -d '{
                 "branch": "main",
                 "env": {
                   "DATABASE_URL": "$POSTGRES_URL"
                 }
-              }')
-          echo "Render Deployment Response: $response"
-
-
-
+              }'
