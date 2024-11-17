@@ -19,6 +19,7 @@ flask-login = "*"
 alembic = "*"
 faker = "*"
 flask-session = "*"
+gunicorn = "*"
 
 [dev-packages]
 
