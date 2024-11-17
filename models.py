@@ -4,9 +4,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from sqlalchemy_serializer import SerializerMixin
 from utils import update_leaderboard 
-
-class User(db.Model, UserMixin, SerializerMixin):
-    __tablename__ = 'users'
+# user model
+class User(db.Model, UserMixin, SerializerMixin): 
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
