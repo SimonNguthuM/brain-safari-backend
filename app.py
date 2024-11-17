@@ -39,27 +39,27 @@ def load_user(user_id):
 
 app.logger.setLevel(logging.DEBUG)  
 
-@app.before_first_request
-def check_static_folder():
-    static_folder = app.config['STATIC_FOLDER']
-    try:
-        contents = os.listdir(static_folder)
-        app.logger.debug(f"STATIC_FOLDER contents: {contents}")
-    except Exception as e:
-        app.logger.error(f"Error accessing STATIC_FOLDER: {e}")
+# @app.before_first_request
+# def check_static_folder():
+#     static_folder = app.config['STATIC_FOLDER']
+#     try:
+#         contents = os.listdir(static_folder)
+#         app.logger.debug(f"STATIC_FOLDER contents: {contents}")
+#     except Exception as e:
+#         app.logger.error(f"Error accessing STATIC_FOLDER: {e}")
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve_react_app(path):
-    static_folder = app.config['STATIC_FOLDER']
-    index_path = os.path.join(static_folder, 'index.html')
+# @app.route('/', defaults={'path': ''})
+# @app.route('/<path:path>')
+# def serve_react_app(path):
+#     static_folder = app.config['STATIC_FOLDER']
+#     index_path = os.path.join(static_folder, 'index.html')
 
-    if path and os.path.exists(os.path.join(static_folder, path)):
-        return send_from_directory(static_folder, path)
-    elif os.path.exists(index_path):
-        return send_from_directory(static_folder, 'index.html')
-    else:
-        return "React build not found", 404
+#     if path and os.path.exists(os.path.join(static_folder, path)):
+#         return send_from_directory(static_folder, path)
+#     elif os.path.exists(index_path):
+#         return send_from_directory(static_folder, 'index.html')
+#     else:
+#         return "React build not found", 404
 
     
 @app.route('/signup', methods=['POST'])
@@ -683,4 +683,4 @@ api.add_resource(Challenges, '/challenge/<int:id>')
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5555)
+    app.run(host="0.0.0.0")
