@@ -30,6 +30,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Checkout frontend repository
+        uses: actions/checkout@v2
+        with:
+          repository: 'SimonNguthuM/brain-safari-frontend'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: frontend 
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -43,6 +50,12 @@ jobs:
       - name: Set up environment
         run: |
           echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/brain_safari_db" >> .env
+
+      - name: Build React app
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build  
 
   merge:
     runs-on: ubuntu-latest
@@ -91,7 +104,7 @@ jobs:
           flask db migrate -m "Auto migration from GitHub Actions" || echo "No migration necessary"
           flask db upgrade
           
-      # - name: Seed Database
+       # - name: Seed Database
       #   env:
       #     DATABASE_URL: ${{ secrets.POSTGRES_URL }}
       #   run: |
