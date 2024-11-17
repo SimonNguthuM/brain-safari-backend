@@ -39,6 +39,15 @@ def load_user(user_id):
 
 app.logger.setLevel(logging.DEBUG)  
 
+@app.before_first_request
+def check_static_folder():
+    static_folder = app.config['STATIC_FOLDER']
+    try:
+        contents = os.listdir(static_folder)
+        app.logger.debug(f"STATIC_FOLDER contents: {contents}")
+    except Exception as e:
+        app.logger.error(f"Error accessing STATIC_FOLDER: {e}")
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react_app(path):
