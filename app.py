@@ -8,6 +8,7 @@ from config import Config
 from db import db
 from datetime import datetime
 import os
+import logging
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -36,14 +37,26 @@ from models import (
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+app.logger.setLevel(logging.DEBUG)  
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react_app(path):
-    static_folder = app.config['STATIC_FOLDER']  
+    static_folder = app.config['STATIC_FOLDER']
+    index_path = os.path.join(static_folder, 'index.html')
+
+    app.logger.debug(f"STATIC_FOLDER: {static_folder}")
+    if os.path.exists(static_folder):
+        app.logger.debug(f"Directory Contents: {os.listdir(static_folder)}")
+    else:
+        app.logger.debug("STATIC_FOLDER does not exist")
+
     if path and os.path.exists(os.path.join(static_folder, path)):
         return send_from_directory(static_folder, path)
+    elif os.path.exists(index_path):
+        return send_from_directory(static_folder, 'index.html')
     else:
-        return send_from_directory(static_folder, 'index.html')  
+        return "React build not found", 404
     
 @app.route('/signup', methods=['POST'])
 def signup():
