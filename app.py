@@ -1,6 +1,6 @@
 from functools import wraps
-from flask import Flask, request, jsonify, session
-from flask_login import current_user, login_required, LoginManager
+from flask import Flask, request, jsonify, session, make_response
+from flask_login import current_user, login_required, LoginManager, login_user
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -11,9 +11,10 @@ from datetime import datetime
 app = Flask(__name__)
 app.config.from_object(Config)
 
+db.init_app(app)
+
 CORS(app, supports_credentials=True)
 
-db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
 
@@ -34,73 +35,101 @@ from models import (
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-class Signup(RestResource):
-    def post(self):
-        """Registers a new user with a default 'Learner' role."""
-        data = request.json
+@app.route('/signup', methods=['POST'])
+def signup():
+    try:
+        data = request.get_json()
         username = data.get('username')
         email = data.get('email')
         password = data.get('password')
+        role = data.get('role', "Learner")  
 
-        if not (username and email and password):
-            return {"message": "All fields are required"}, 400
+        if not username or not email or not password:
+            return jsonify({"error": "All fields are required"}), 400
+
+        if User.query.filter_by(username=username).first():
+            return jsonify({"error": "Username already exists"}), 400
 
         if User.query.filter_by(email=email).first():
-            return {"message": "User with this email already exists"}, 400
+            return jsonify({"error": "Email already exists"}), 400
 
-        new_user = User(username=username, email=email, role='Learner')
-        new_user.set_password(password)
-        db.session.add(new_user)
+        valid_roles = ['Learner', 'Contributor', 'Admin']  # List of valid roles
+        if role not in valid_roles:
+            return jsonify({"error": f"Invalid role: {role}. Valid roles are: {', '.join(valid_roles)}"}), 400
+
+        
+        user = User(username=username, email=email, role=role)
+        user.set_password(password)
+        db.session.add(user)
         db.session.commit()
 
-        return {"message": f"User {username} created successfully"}, 201
+        return jsonify({"message": "User created successfully", "role": user.role}), 201
 
-class Login(RestResource):
-    def post(self):
-        """Logs in a user and sets session data."""
-        data = request.json
-        email = data.get('email')
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        username = data.get('username')
         password = data.get('password')
 
-        user = User.query.filter_by(email=email).first()
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+
+        user = User.query.filter_by(username=username).first()
+
         if user and user.check_password(password):
-            session['user_id'] = user.id
-            session['username'] = user.username
-            return {"message": "Login successful", "user": user.username}, 200
+            login_user(user)
+
+            response_data = {
+                "message": "Login successful",
+                "username": user.username,
+                "email": user.email,
+                "role": user.role, 
+            }
+
+            response = make_response(jsonify(response_data))
+
+            response.set_cookie(
+                "session_token",
+                value=user.username,  # Use a secure token like JWT in production
+                httponly=True,
+                secure=True,  
+                samesite="None",
+            )
+            print("Cookie set:", response.headers) 
+            return response
         else:
-            return {"message": "Invalid email or password"}, 401
+            return jsonify({"error": "Invalid username or password"}), 401
 
-class ProtectedResource(RestResource):
-    """Example protected resource that requires user to be logged in."""
-    def get(self):
-        if 'user_id' not in session:
-            return {"message": "Unauthorized access"}, 401
-        return {"message": f"Hello, {session['username']}"}
+    except Exception as e:
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
-class UpdateRole(RestResource):
-    """Allows an Admin to update a user's role."""
-    def put(self):
-        data = request.json
-        email = data.get('email')
-        new_role = data.get('role')
+@app.route('/authenticate', methods=['GET'])
+@login_required
+def authenticate():
+    try:
+        user = current_user
+        if user.is_authenticated:
+            return jsonify({
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,
+            }), 200
+        else:
+            return jsonify({"error": "User not authenticated"}), 401
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        if new_role not in ['Admin', 'Contributor', 'Learner']:
-            return {"message": "Invalid role specified"}, 400
+@app.route('/logout', methods=['POST'])
+def logout():
+    response = make_response(jsonify({"message": "Logged out"}))
+    response.delete_cookie("session_token")  
+    return response
 
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            return {"message": "User not found"}, 404
 
-        user.role = new_role
-        db.session.commit()
-
-        return {"message": f"User {user.username}'s role updated to {new_role}"}, 200
-
-class Logout(RestResource):
-    def post(self):
-        session.clear()
-        return {"message": "Logged out successfully"}
-    
 class AllLearningPaths(RestResource):
     def get(self):
         """Fetches all learning paths."""
@@ -129,14 +158,13 @@ class LearningPathModules(RestResource):
     def get(self, learning_path_id):
         """Fetches all modules in an enrolled learning path for the learner."""
         # Verify enrollment
-        if not UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=learning_path_id).first():
-            return {"message": "Enroll in the learning path first"}, 403
+        # if not UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=learning_path_id).first():
+        #     return {"message": "Enroll in the learning path first"}, 403
 
         modules = Module.query.filter_by(learning_path_id=learning_path_id).all()
         return [{"id": module.id, "name": module.name} for module in modules], 200
 
 class ModuleResources(RestResource):
-    @login_required
     def get(self, module_id):
         """Fetches resources within a specific module."""
         module = Module.query.get_or_404(module_id)
@@ -557,12 +585,23 @@ class Challenges(RestResource):
         return {"message": "Challenge marked as completed"}, 200
 
 
-class Achievements(RestResource):
-    def get(self, user_id):
-        # Query all achievements related to a specific user
-        user_achievements = UserAchievement.query.filter_by(user_id=user_id).all()
-        
-        
+@app.route('/users/<string:username>/achievements', methods=['GET'])
+@login_required
+def get_achievements(username):
+    try:
+        # Ensure the current user matches the requested username
+        if current_user.username != username:
+            return jsonify({"error": "Unauthorized access"}), 403
+
+        # Fetch the user by username
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Fetch achievements for the user
+        user_achievements = UserAchievement.query.filter_by(user_id=user.id).all()
+
+        # Serialize the achievements
         achievements = [
             {
                 "id": achievement.achievement.id,
@@ -573,13 +612,12 @@ class Achievements(RestResource):
             }
             for achievement in user_achievements
         ]
-        
-        return jsonify(achievements)
 
-api.add_resource(Signup, '/signup')
-api.add_resource(Login, '/login')
-api.add_resource(UpdateRole, '/update_role')
-api.add_resource(Logout, '/logout')
+        return jsonify(achievements), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 api.add_resource(AllLearningPaths, '/learning_paths')
 api.add_resource(EnrollLearningPath, '/learning_path/<int:learning_path_id>/enroll')
 api.add_resource(LearningPathModules, '/learning_path/<int:learning_path_id>/modules')
@@ -595,7 +633,7 @@ api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
 api.add_resource(QuizContent, '/quizzes/<int:quiz_id>/content')
 api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
 api.add_resource(Challenges, '/challenge/<int:id>')
-api.add_resource(Achievements, '/users/<int:user_id>/achievements')
+# api.add_resource(Achievement, '/users/<int:user_id>/achievements')
 
 @app.route("/")
 def home():
