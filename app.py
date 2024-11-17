@@ -131,9 +131,16 @@ def authenticate():
 @app.route('/logout', methods=['POST'])
 def logout():
     print("Logout route accessed")
+    session.pop('user', None)
     response = make_response(jsonify({"message": "Logged out"}))
     response.delete_cookie(
         "session_token", 
+        httponly=True, 
+        secure=True, 
+        samesite="None"  
+    )
+    response.delete_cookie(
+        "session", 
         httponly=True, 
         secure=True, 
         samesite="None"  
@@ -647,9 +654,6 @@ api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
 api.add_resource(Challenges, '/challenge/<int:id>')
 # api.add_resource(Achievement, '/users/<int:user_id>/achievements')
 
-@app.route("/")
-def home():
-    return "<h1>Welcome here. You better work!</h1>"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5555)
