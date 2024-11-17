@@ -70,6 +70,10 @@ def signup():
 
 @app.route('/login', methods=['POST'])
 def login():
+    print("Login route accessed")
+    print("Request method:", request.method)
+    print("Request headers:", request.headers)
+    print("Request body:", request.data)
     try:
         data = request.get_json()
         username = data.get('username')
@@ -110,6 +114,7 @@ def login():
 @app.route('/authenticate', methods=['GET'])
 @login_required
 def authenticate():
+    print("authenticate route accessed")
     try:
         user = current_user
         if user.is_authenticated:
