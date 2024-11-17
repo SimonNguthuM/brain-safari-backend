@@ -78,6 +78,12 @@ jobs:
           flask db migrate -m "Auto migration from GitHub Actions" || echo "No migration necessary"
           flask db upgrade
 
+      # - name: Seed Database
+      #   env:
+      #     DATABASE_URL: ${{ secrets.POSTGRES_URL }}
+      #   run: |
+      #     python seed.py || echo "Seeding not necessary or failed"
+
       - name: Debug Environment Variables
         env:
           DATABASE_URL: ${{ secrets.POSTGRES_URL }}
@@ -87,19 +93,7 @@ jobs:
       - name: Deploy to Render
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
           curl -X POST "https://api.render.com/v1/services/srv-csossa1u0jms738pdbfg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY" \
-          -d '{
-                "branch": "main",
-                "env": {
-                  "DATABASE_URL": "'"${POSTGRES_URL}"'"
-                }
-              }'
-
-      - name: Start Flask app with Gunicorn
-        env:
-          DATABASE_URL: ${{ secrets.POSTGRES_URL }}
-        run: |
-          gunicorn -b 0.0.0.0:5000 app:app --log-level debug
+          -d '{"branch": "main"}'
