@@ -130,9 +130,16 @@ def authenticate():
 
 @app.route('/logout', methods=['POST'])
 def logout():
+    print("Logout route accessed")
     response = make_response(jsonify({"message": "Logged out"}))
-    response.delete_cookie("session_token")  
+    response.delete_cookie(
+        "session_token", 
+        httponly=True, 
+        secure=True, 
+        samesite="None"  
+    )
     return response
+
 
 
 class AllLearningPaths(RestResource):
