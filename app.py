@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Flask, request, jsonify, session, make_response
+from flask import Flask, request, jsonify, session, make_response, send_from_directory
 from flask_login import current_user, login_required, LoginManager, login_user
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
@@ -7,6 +7,8 @@ from flask_cors import CORS
 from config import Config
 from db import db
 from datetime import datetime
+import os
+import logging
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -35,6 +37,22 @@ from models import (
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+app.logger.setLevel(logging.DEBUG)  
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react_app(path):
+    static_folder = app.config['STATIC_FOLDER']
+    index_path = os.path.join(static_folder, 'index.html')
+
+    if path and os.path.exists(os.path.join(static_folder, path)):
+        return send_from_directory(static_folder, path)
+    elif os.path.exists(index_path):
+        return send_from_directory(static_folder, 'index.html')
+    else:
+        return "React build not found", 404
+
+    
 @app.route('/signup', methods=['POST'])
 def signup():
     try:
