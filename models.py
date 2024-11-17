@@ -261,9 +261,9 @@ class Achievement(db.Model, SerializerMixin):
 
 class Leaderboard(db.Model, SerializerMixin):
     __tablename__ = 'leaderboards'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     score = db.Column(db.Integer, default=0)
 
     user = db.relationship("User", back_populates="leaderboard_entry")
@@ -271,13 +271,12 @@ class Leaderboard(db.Model, SerializerMixin):
     def to_dict(self):
         return {
             "id": self.id,
-            "user_id": self.user.id,
+            "user_id": self.user_id,
             "score": self.score
         }
 
     def __repr__(self):
         return f"<Leaderboard(id={self.id}, score={self.score})>"
-
 
 class ModuleResource(db.Model, SerializerMixin):
     __tablename__ = 'module_resources'
