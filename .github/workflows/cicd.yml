@@ -101,10 +101,6 @@ jobs:
           FLASK_APP: app.py 
           DATABASE_URL: ${{ secrets.POSTGRES_URL }}
         run: |
-          until pg_isready -h localhost -p 5432 -U postgres; do
-              echo "Waiting for database to be ready..."
-              sleep 2
-          done
           flask db migrate -m "Auto migration from GitHub Actions" || echo "No migration necessary"
           flask db upgrade
 
