@@ -497,23 +497,12 @@ class Challenges(RestResource):
         return {"message": "Challenge marked as completed"}, 200
 
 
-@app.route('/users/<string:username>/achievements', methods=['GET'])
-@login_required
-def get_achievements(username):
-    try:
-        # Ensure the current user matches the requested username
-        if current_user.username != username:
-            return jsonify({"error": "Unauthorized access"}), 403
-
-        # Fetch the user by username
-        user = User.query.filter_by(username=username).first()
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-        # Fetch achievements for the user
-        user_achievements = UserAchievement.query.filter_by(user_id=user.id).all()
-
-        # Serialize the achievements
+class Achievements(RestResource):
+    def get(self, user_id):
+        # Query all achievements related to a specific user
+        user_achievements = UserAchievement.query.filter_by(user_id=user_id).all()
+        
+        
         achievements = [
             {
                 "id": achievement.achievement.id,
@@ -524,11 +513,9 @@ def get_achievements(username):
             }
             for achievement in user_achievements
         ]
+        
+        return jsonify(achievements)
 
-        return jsonify(achievements), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 api.add_resource(Feedbacks, '/feedbacks')
 api.add_resource(FeedbackResource, '/feedback/<int:id>')
@@ -538,7 +525,7 @@ api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
 api.add_resource(QuizContent, '/quizzes/<int:quiz_id>/content')
 api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
 api.add_resource(Challenges, '/challenge/<int:id>')
-# api.add_resource(Achievement, '/users/<int:user_id>/achievements')
+api.add_resource(Achievements, '/users/<int:user_id>/achievements')
 
 
 if __name__ == "__main__":
