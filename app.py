@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Flask, request, jsonify, session, make_response, send_from_directory
+from flask import Flask, request, jsonify, session, make_response, Blueprint
 from flask_login import current_user, login_required, LoginManager, login_user
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
@@ -7,7 +7,6 @@ from flask_cors import CORS
 from config import Config
 from db import db
 from datetime import datetime
-import os
 import logging
 
 app = Flask(__name__)
@@ -37,31 +36,8 @@ from models import (
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-app.logger.setLevel(logging.DEBUG)  
-
-# @app.before_first_request
-# def check_static_folder():
-#     static_folder = app.config['STATIC_FOLDER']
-#     try:
-#         contents = os.listdir(static_folder)
-#         app.logger.debug(f"STATIC_FOLDER contents: {contents}")
-#     except Exception as e:
-#         app.logger.error(f"Error accessing STATIC_FOLDER: {e}")
-
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve_react_app(path):
-    static_folder = app.config['STATIC_FOLDER']
-    index_path = os.path.join(static_folder, 'index.html')
-
-    if path and os.path.exists(os.path.join(static_folder, path)):
-        return send_from_directory(static_folder, path)
-    elif os.path.exists(index_path):
-        return send_from_directory(static_folder, 'index.html')
-    else:
-        return "React build not found", 404
-
-    
+logging.basicConfig(level=logging.DEBUG) 
+  
 @app.route('/signup', methods=['POST'])
 def signup():
     try:
@@ -98,9 +74,6 @@ def signup():
 @app.route('/login', methods=['POST'])
 def login():
     print("Login route accessed")
-    print("Request method:", request.method)
-    print("Request headers:", request.headers)
-    print("Request body:", request.data)
     try:
         data = request.get_json()
         username = data.get('username')
@@ -114,11 +87,14 @@ def login():
         if user and user.check_password(password):
             login_user(user)
 
+            # Store the role in session
+            session['role'] = user.role
+
             response_data = {
                 "message": "Login successful",
                 "username": user.username,
                 "email": user.email,
-                "role": user.role, 
+                "role": user.role,
             }
 
             response = make_response(jsonify(response_data))
@@ -173,116 +149,6 @@ def logout():
         samesite="None"  
     )
     return response
-
-
-
-class AllLearningPaths(RestResource):
-    def get(self):
-        """Fetches all learning paths."""
-        learning_paths = LearningPath.query.all()
-        return [{"id": path.id, "name": path.title, "description": path.description} for path in learning_paths], 200
-
-class EnrollLearningPath(RestResource):
-    @login_required
-    def post(self, learning_path_id):
-        """Allows a learner to enroll in a learning path."""
-        learning_path = LearningPath.query.get_or_404(learning_path_id)
-        
-        # Check if user is already enrolled
-        if UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=learning_path_id).first():
-            return {"message": "Already enrolled in this learning path"}, 200
-        
-        enrollment = UserLearningPath(user_id=current_user.id, learning_path_id=learning_path_id)
-        db.session.add(enrollment)
-        db.session.commit()
-
-        return {"message": f"Enrolled in {learning_path.name} successfully"}, 201
-
-# Access modules and resources only if the learner is enrolled
-class LearningPathModules(RestResource):
-    @login_required
-    def get(self, learning_path_id):
-        """Fetches all modules in an enrolled learning path for the learner."""
-        # Verify enrollment
-        # if not UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=learning_path_id).first():
-        #     return {"message": "Enroll in the learning path first"}, 403
-
-        modules = Module.query.filter_by(learning_path_id=learning_path_id).all()
-        return [{"id": module.id, "name": module.name} for module in modules], 200
-
-class ModuleResources(RestResource):
-    def get(self, module_id):
-        """Fetches resources within a specific module."""
-        module = Module.query.get_or_404(module_id)
-        
-        # Ensure learner is enrolled in the learning path
-        if not UserLearningPath.query.filter_by(user_id=current_user.id, learning_path_id=module.learning_path_id).first():
-            return {"message": "Enroll in the learning path first"}, 403
-
-        resources = Resource.query.filter_by(module_id=module_id).all()
-        return [{"id": resource.id, "title": resource.title} for resource in resources], 200
-
-# Contributor permission required for creating learning paths, modules, and resources
-def contributor_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'Contributor':
-            return jsonify({"error": "Contributor access required"}), 403
-        return f(*args, **kwargs)
-    return decorated_function
-
-class CreateLearningPath(RestResource):
-    @contributor_required
-    def post(self):
-        """Allows a contributor to create a new learning path."""
-        data = request.json
-        name = data.get("name")
-        description = data.get("description")
-
-        if not name:
-            return {"message": "Name is required"}, 400
-
-        new_path = LearningPath(name=name, description=description)
-        db.session.add(new_path)
-        db.session.commit()
-
-        return {"message": f"Learning path {name} created successfully"}, 201
-
-class CreateModule(RestResource):
-    @contributor_required
-    def post(self, learning_path_id):
-        """Allows a contributor to create a module within a learning path."""
-        learning_path = LearningPath.query.get_or_404(learning_path_id)
-        data = request.json
-        name = data.get("name")
-
-        if not name:
-            return {"message": "Module name is required"}, 400
-
-        new_module = Module(name=name, learning_path_id=learning_path_id)
-        db.session.add(new_module)
-        db.session.commit()
-
-        return {"message": f"Module {name} created successfully under {learning_path.name}"}, 201
-
-class CreateResource(RestResource):
-    @contributor_required
-    def post(self, module_id):
-        """Allows a contributor to add a resource to a module."""
-        module = Module.query.get_or_404(module_id)
-        data = request.json
-        title = data.get("title")
-        content = data.get("content")
-
-        if not (title and content):
-            return {"message": "Title and content are required"}, 400
-
-        new_resource = Resource(title=title, content=content, module_id=module_id)
-        db.session.add(new_resource)
-        db.session.commit()
-
-        return {"message": f"Resource '{title}' created successfully in module '{module.name}'"}, 201
-
 
 # Feedback Routes
 # decorator function to wrap the Feedback function
@@ -664,13 +530,6 @@ def get_achievements(username):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-api.add_resource(AllLearningPaths, '/learning_paths')
-api.add_resource(EnrollLearningPath, '/learning_path/<int:learning_path_id>/enroll')
-api.add_resource(LearningPathModules, '/learning_path/<int:learning_path_id>/modules')
-api.add_resource(ModuleResources, '/module/<int:module_id>/resources')
-api.add_resource(CreateLearningPath, '/contributor/learning_path')
-api.add_resource(CreateModule, '/contributor/learning_path/<int:learning_path_id>/module')
-api.add_resource(CreateResource, '/contributor/module/<int:module_id>/resource')
 api.add_resource(Feedbacks, '/feedbacks')
 api.add_resource(FeedbackResource, '/feedback/<int:id>')
 api.add_resource(Comments, '/comments', '/comments/<int:comment_id>')
@@ -683,4 +542,4 @@ api.add_resource(Challenges, '/challenge/<int:id>')
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0", port=5555)
