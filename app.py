@@ -8,6 +8,8 @@ from config import Config
 from db import db
 from datetime import datetime
 import logging
+import json
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -393,6 +395,70 @@ def update_learning_path(path_id):
 
         db.session.commit()
         return jsonify(learning_path.to_dict()), 200
+    
+@app.route('/modules/<int:module_id>/quizzes', methods=['POST'])
+@login_required
+def create_quiz_for_module(module_id):
+    if current_user.role != 'Contributor':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    logger.debug(f"Creating quiz for module {module_id} by user {current_user.id}. Data: {data}")
+
+    new_quiz = QuizContent(
+        module_id=module_id,
+        question=data.get("question"),
+        options=json.dumps(data.get("options")),  # Assuming options is a list
+        correct_option=data.get("correct_option"),
+    )
+    db.session.add(new_quiz)
+    db.session.commit()
+    logger.info(f"Quiz created for module {module_id}: {new_quiz.to_dict()}")
+
+    return jsonify(new_quiz.to_dict()), 201
+
+
+@app.route('/modules/<int:module_id>/quizzes', methods=['GET'])
+@login_required
+def get_quizzes_for_module(module_id):
+    logger.debug(f"Fetching quizzes for module {module_id}")
+
+    quizzes = QuizContent.query.filter_by(module_id=module_id).all()
+    quizzes_dict = [quiz.to_dict() for quiz in quizzes]
+    logger.debug(f"Quizzes found for module {module_id}: {quizzes_dict}")
+
+    return jsonify(quizzes_dict)
+
+
+@app.route('/quizzes/<int:quiz_id>/submit', methods=['POST'])
+@login_required
+def submit_quiz(quiz_id):
+    data = request.get_json()
+    logger.debug(f"Submitting quiz {quiz_id} for user {current_user.id}. Data: {data}")
+
+
+    quiz = QuizContent.query.get_or_404(quiz_id)
+
+    selected_option = data.get("selected_option")
+
+    score = 1 if selected_option == quiz.correct_option else 0
+
+    submission = QuizSubmission(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
+        selected_option=selected_option,
+        score=score,
+    )
+
+    db.session.add(submission)
+    db.session.commit()
+
+    submission.update_user_points() 
+
+    logger.info(f"Quiz {quiz_id} submitted by user {current_user.id}: {submission.to_dict()}")
+
+    return jsonify({"message": "Quiz submitted", "score": score}), 200
+
 
 class Feedbacks(RestResource): 
     """Resource for handling feedback collection."""
@@ -605,155 +671,11 @@ class Replies(RestResource):
 
        return {'message': 'Reply deleted successfully'}, 204
 
-class Quizzes(RestResource):
-    def get(self, module_id):
-        quizzes = QuizContent.query.filter_by(module_id=module_id, type="quiz").all()
-        return jsonify([
-            {
-                "id": quiz.id,
-                "title": quiz.content_text, 
-                "points": quiz.points,
-                "created_at": quiz.created_at
-            } for quiz in quizzes
-        ])
-class QuizContent(RestResource):
-    def get(self, quiz_id):
-        quiz_content = QuizContent.query.filter_by(parent_id=quiz_id).all()
-        return jsonify([
-            {
-                "id": content.id,
-                "type": content.type,
-                "content_text": content.content_text,
-                "points": content.points,
-                "is_correct": content.is_correct,
-                "created_at": content.created_at
-            } for content in quiz_content
-        ])
-
-class QuizSubmission(RestResource):
-    def post(self, quiz_id):
-        data = request.json
-        user_id = data.get("user_id")
-        user_answers = data.get("answers")
-
-        if not user_id or not user_answers:
-            return jsonify({"error": "user_id and answers are required"}), 400  
-        
-        score = 0
-        for answer_id in user_answers:
-            answer = QuizContent.query.get(answer_id)
-            if answer and answer.is_correct:
-                score += answer.points or 0
-
-        submission = QuizSubmission(
-            user_id=user_id,
-            quiz_id=quiz_id,
-            score=score,
-            submitted_at=datetime.utcnow()
-        )
-        db.session.add(submission)
-        db.session.commit()
-
-        return jsonify({"quiz_id": quiz_id, "score": score, "submitted_at": submission.submitted_at})
-
-    def get(self, quiz_id, user_id):
-        submission = QuizSubmission.query.filter_by(quiz_id=quiz_id, user_id=user_id).first_or_404()
-        return jsonify({
-            "quiz_id": submission.quiz_id,
-            "user_id": submission.user_id,
-            "score": submission.score,
-            "submitted_at": submission.submitted_at
-        })
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'admin':
-            return jsonify({"error": "Admin access required"}), 403
-        return f(*args, **kwargs)
-    return decorated_function
-
-class Challenges(RestResource):
-    @admin_required
-    def post(self):
-        """Allows admin to create a new challenge."""
-        data = request.get_json()
-        try:
-            new_challenge = Challenge(**data)
-            db.session.add(new_challenge)
-            db.session.commit()
-            return new_challenge.to_dict(), 201
-        except Exception as e:
-            db.session.rollback()
-            return {"error": "Challenge creation failed", "message": str(e)}, 400
-
-    def get(self, challenge_id):
-        """Allows users to view challenge details."""
-        challenge = Challenge.query.get(challenge_id)
-        if not challenge:
-            return {"error": "Challenge not found"}, 404
-        return challenge.to_dict(), 200
-
-    @admin_required
-    def put(self, challenge_id):
-        """Allows admin to update challenge details."""
-        data = request.get_json()
-        challenge = Challenge.query.get(challenge_id)
-        if not challenge:
-            return {"error": "Challenge not found"}, 404
-        try:
-            for key, value in data.items():
-                setattr(challenge, key, value)
-            db.session.commit()
-            return challenge.to_dict(), 200
-        except Exception as e:
-            db.session.rollback()
-            return {"error": "Challenge update failed", "message": str(e)}, 400
-
-    @admin_required
-    def delete(self, challenge_id):
-        """Allows admin to delete a challenge."""
-        challenge = Challenge.query.get(challenge_id)
-        if not challenge:
-            return {"error": "Challenge not found"}, 404
-        db.session.delete(challenge)
-        db.session.commit()
-        return {"message": "Challenge deleted successfully"}, 204
-
-    @login_required
-    def post(self, challenge_id):
-        """Allows a logged-in user to mark a challenge as completed."""
-        challenge = Challenge.query.get(challenge_id)
-        if not challenge:
-            return {"error": "Challenge not found"}, 404
-
-        user_challenge = UserChallenge.query.filter_by(user_id=current_user.id, challenge_id=challenge_id).first()
-        if user_challenge and user_challenge.completed:
-            return {"message": "Challenge already marked as completed"}, 200
-
-        if not user_challenge:
-            user_challenge = UserChallenge(user_id=current_user.id, challenge_id=challenge_id, completed=True)
-            db.session.add(user_challenge)
-        else:
-            user_challenge.completed = True
-
-        db.session.commit()
-        return {"message": "Challenge marked as completed"}, 200
-
-
-@app.route('/users/<string:username>/achievements', methods=['GET'])
-@login_required
-def get_achievements(username):
-    try:
-        if current_user.username != username:
-            return jsonify({"error": "Unauthorized access"}), 403
-
-        user = User.query.filter_by(username=username).first()
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-        user_achievements = UserAchievement.query.filter_by(user_id=user.id).all()
-
+class Achievements(RestResource):
+    def get(self, user_id):
+        user_achievements = UserAchievement.query.filter_by(user_id=user_id).all()
+       
+       
         achievements = [
             {
                 "id": achievement.achievement.id,
@@ -764,22 +686,16 @@ def get_achievements(username):
             }
             for achievement in user_achievements
         ]
+       
+        return jsonify(achievements)
 
-        return jsonify(achievements), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 api.add_resource(Feedbacks, '/feedbacks')
 api.add_resource(FeedbackResource, '/feedback/<int:id>')
 api.add_resource(Comments, '/comments', '/comments/<int:comment_id>')
 api.add_resource(Replies, '/comments/<int:comment_id>/replies')
-api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
-api.add_resource(QuizContent, '/quizzes/<int:quiz_id>/content')
-api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
-api.add_resource(Challenges, '/challenges', endpoint='challenges_list')
-api.add_resource(Challenges, '/challenge/<int:id>', endpoint='challenge_id')
 
+api.add_resource(Achievements, '/users/<int:user_id>/achievements')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5555)
