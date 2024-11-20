@@ -635,20 +635,6 @@ def admin_required(f):
     return decorated_function
 
 class Challenges(RestResource):
-    @admin_required
-    def post(self):
-        """Allows admin to create a new challenge."""
-        data = request.get_json()
-        try:
-            new_challenge = Challenge(**data)
-            db.session.add(new_challenge)
-            db.session.commit()
-            return new_challenge.to_dict(), 201
-        except Exception as e:
-            db.session.rollback()
-            return {"error": "Challenge creation failed", "message": str(e)}, 400
-
-
     def get(self, challenge_id):
         """Allows users to view challenge details."""
         challenge = Challenge.query.get(challenge_id)
@@ -739,7 +725,6 @@ api.add_resource(Replies, '/comments/<int:comment_id>/replies')
 api.add_resource(Quizzes, '/modules/<int:module_id>/quizzes')
 api.add_resource(QuizContent, '/quizzes/<int:quiz_id>/content')
 api.add_resource(QuizSubmission, '/quizzes/<int:quiz_id>/submit')
-api.add_resource(Challenges, '/challenges')
 api.add_resource(Challenges, '/challenge/<int:id>')
 
 
