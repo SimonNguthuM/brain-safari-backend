@@ -38,7 +38,46 @@ def load_user(user_id):
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__) 
-  
+
+@app.route('/admin/users', methods=['GET'])
+@login_required
+def get_users():
+    """Admin route to fetch all users."""
+    if current_user.role != 'Admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    users = User.query.all()
+    user_list = [user.to_dict() for user in users]
+    return jsonify(user_list), 200
+
+
+@app.route('/admin/users/<int:user_id>/role', methods=['PATCH'])
+@login_required
+def update_user_role(user_id):
+    """Admin route to update a user's role."""
+    if current_user.role != 'Admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        data = request.get_json()
+        new_role = data.get("role")
+
+        valid_roles = ['Learner', 'Contributor']
+        if new_role not in valid_roles:
+            return jsonify({"error": f"Invalid role. Valid roles are: {', '.join(valid_roles)}"}), 400
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        user.role = new_role
+        db.session.commit()
+
+        return jsonify({"message": "Role updated successfully", "user": user.to_dict()}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/signup', methods=['POST'])
 def signup():
     try:
