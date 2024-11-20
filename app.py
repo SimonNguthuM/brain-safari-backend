@@ -112,7 +112,7 @@ def signup():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/login', methods=['POST'])
 def login():
     print("Login route accessed")
@@ -136,6 +136,7 @@ def login():
                 "username": user.username,
                 "email": user.email,
                 "role": user.role,
+                "points": user.points  
             }
 
             response = make_response(jsonify(response_data))
