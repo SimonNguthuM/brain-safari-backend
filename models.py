@@ -18,6 +18,7 @@ class User(db.Model, UserMixin, SerializerMixin):
 
     leaderboard_entry = db.relationship('Leaderboard', back_populates='user', uselist=False)
     feedback = db.relationship('Feedback', back_populates='user')
+    quiz_attempts = db.relationship('QuizSubmission', back_populates='user', lazy='dynamic')
     comments = db.relationship('Comment', back_populates='user')
     replies = db.relationship('Reply', back_populates='user')
     enrolled_paths = db.relationship('UserLearningPath', back_populates='user')
@@ -382,12 +383,13 @@ class QuizContent(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     module_id = db.Column(db.Integer, db.ForeignKey('modules.id'))
     parent_id = db.Column(db.Integer, db.ForeignKey('quiz_content.id'))
-    type = db.Column(db.String, nullable=False)
-    content_text = db.Column(db.Text, nullable=False)
+    question = db.Column(db.Text, nullable=False)
+    options = db.Column(db.JSON, nullable=False)
+    correct_option = db.Column(db.String, nullable=False)
     points = db.Column(db.Integer)
-    is_correct = db.Column(db.Boolean)
 
     module = db.relationship("Module", back_populates="quiz_content")
+    attempts = db.relationship('QuizSubmission', back_populates='quiz', lazy='dynamic')
     parent = db.relationship("QuizContent", remote_side=[id], back_populates="children")
     children = db.relationship("QuizContent", back_populates="parent")
 
@@ -396,14 +398,14 @@ class QuizContent(db.Model, SerializerMixin):
             "id": self.id,
             "module_id": self.module_id,
             "parent_id": self.parent_id,
-            "type": self.type,
-            "content_text": self.content_text,
-            "points": self.points,
-            "is_correct": self.is_correct
+            "question": self.question,
+            "options": self.options,
+            "correct_option": self.correct_option,
+            "points": self.points
         }
 
     def __repr__(self):
-        return f"<QuizContent(id={self.id})>"
+        return f"<QuizContent(id={self.id}, question={self.question[:20]}...)>"
 
 
 class QuizSubmission(db.Model, SerializerMixin):
@@ -412,6 +414,7 @@ class QuizSubmission(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     quiz_id = db.Column(db.Integer, db.ForeignKey('quiz_content.id'))
+    selected_option = db.Column(db.String, nullable=False)
     score = db.Column(db.Integer)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -423,9 +426,16 @@ class QuizSubmission(db.Model, SerializerMixin):
             "id": self.id,
             "user_id": self.user.id,
             "quiz_id": self.quiz.id,
+            "selected_option": self.selected_option,
             "score": self.score,
             "submitted_at": self.submitted_at.isoformat()
         }
 
     def __repr__(self):
-        return f"<QuizSubmission(id={self.id})>"
+        return f"<QuizSubmission(id={self.id}, selected_option={self.selected_option})>"
+
+    def update_user_points(self):
+        """Update user's points based on the quiz score."""
+        if self.score is not None:
+            self.user.add_points(self.score)  
+            db.session.commit()  

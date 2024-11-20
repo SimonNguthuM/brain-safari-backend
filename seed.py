@@ -111,17 +111,17 @@ def seed_database():
         user.add_points(random.randint(50, 150))
 
     quiz_contents = []
-    quiz1 = QuizContent(module_id=module1.id, type="quiz", content_text="What is Python?", points=10)
-    question1 = QuizContent(module_id=module1.id, type="question", content_text="What is Python used for?", points=5)
-    option1 = QuizContent(module_id=module1.id, type="option", content_text="Programming Language", is_correct=True)
+    quiz1 = QuizContent(module_id=module1.id, question="What is Python?", options=["Programming Language", "Snake", "Food"], correct_option="Programming Language", points=10)
+    question1 = QuizContent(module_id=module1.id, parent_id=quiz1.id, question="What is Python used for?", options=["Data Science", "Machine Learning", "Programming Language"], correct_option="Programming Language", points=5)
 
-    quiz_contents.extend([quiz1, question1, option1])
+    quiz_contents.extend([quiz1, question1])
     db.session.add_all(quiz_contents)
     db.session.commit()
 
     quiz_submissions = []
     for user in users[:8]:
-        quiz_submission = QuizSubmission(user_id=user.id, quiz_id=quiz1.id, score=random.randint(0, 10))
+        selected_option = random.choice(quiz1.options)
+        quiz_submission = QuizSubmission(user_id=user.id, quiz_id=quiz1.id, selected_option=selected_option, score=random.randint(0, 10))
         quiz_submissions.append(quiz_submission)
 
     db.session.add_all(quiz_submissions)
