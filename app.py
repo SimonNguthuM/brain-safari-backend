@@ -48,11 +48,9 @@ def get_leaderboard():
 
 @app.route('/users/<username>/points', methods=['GET'])
 def get_user_points(username):
-    # Fetch the user from the database
     user = User.query.filter_by(username=username).first()
     
     if user:
-        # Return user's points in JSON format
         return jsonify({
             "id": user.id,
             "username": user.username,
@@ -532,7 +530,6 @@ def post_comment():
     db.session.add(comment)
     db.session.commit()
 
-    # Return comment with username and created_at timestamp
     return jsonify({
         **comment.to_dict(),
         "username": user.username,
@@ -558,7 +555,6 @@ def post_reply():
     db.session.add(reply)
     db.session.commit()
 
-    # Return reply with username and created_at timestamp
     return jsonify({
         **reply.to_dict(),
         "username": user.username,
@@ -576,8 +572,8 @@ def get_comments():
         comment_data = comment.to_dict()
         comment_data["replies"] = replies_data
         comment_data["replies_count"] = len(replies_data)
-        comment_data["username"] = comment.user.username  # Include the username
-        comment_data["created_at"] = comment.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Include the creation time
+        comment_data["username"] = comment.user.username
+        comment_data["created_at"] = comment.created_at.strftime('%Y-%m-%d %H:%M:%S')
         comments_data.append(comment_data)
     
     return jsonify(comments_data), 200
@@ -594,29 +590,11 @@ def get_user_comments_and_replies(user_id):
         comment_data = comment.to_dict()
         comment_data["replies"] = replies_data
         comment_data["replies_count"] = len(replies_data)
-        comment_data["username"] = comment.user.username  # Include the username
-        comment_data["created_at"] = comment.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Include the creation time
+        comment_data["username"] = comment.user.username
+        comment_data["created_at"] = comment.created_at.strftime('%Y-%m-%d %H:%M:%S')
         comments_data.append(comment_data)
 
     return jsonify({"comments": comments_data}), 200
-
-class Achievements(RestResource):
-    def get(self, user_id):
-        user_achievements = UserAchievement.query.filter_by(user_id=user_id).all()
-       
-       
-        achievements = [
-            {
-                "id": achievement.achievement.id,
-                "name": achievement.achievement.name,
-                "description": achievement.achievement.description,
-                "icon_url": achievement.achievement.icon_url,
-                "points_required": achievement.achievement.points_required
-            }
-            for achievement in user_achievements
-        ]
-       
-        return jsonify(achievements)
 
 @app.route('/feedbacks', methods=['POST'])
 def submit_feedback():
@@ -649,7 +627,50 @@ def submit_feedback():
         "rating": feedback.rating
     }), 201
 
-api.add_resource(Achievements, '/users/<int:user_id>/achievements')
+@app.route('/users/<username>/achievements', methods=['GET'])
+def get_user_achievements(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
 
+    achievements = Achievement.query.all()
+    user_achievements = UserAchievement.query.filter_by(user_id=user.id).all()
+
+    new_achievements = []
+    for achievement in achievements:
+        if user.points >= achievement.points_required:
+            if not any(ua.achievement_id == achievement.id for ua in user_achievements):
+                user_achievement = UserAchievement(
+                    user_id=user.id,
+                    achievement_id=achievement.id,
+                    earned_at=datetime.utcnow()
+                )
+                db.session.add(user_achievement)
+                db.session.commit()
+                new_achievements.append(achievement)
+
+    current_achievements = [
+        {
+            "id": ua.achievement.id,
+            "name": ua.achievement.name,
+            "description": ua.achievement.description,
+            "icon_url": ua.achievement.icon_url,
+            "earned_at": ua.earned_at.isoformat()
+        }
+        for ua in user_achievements
+    ]
+
+    current_achievements.extend([
+        {
+            "id": achievement.id,
+            "name": achievement.name,
+            "description": achievement.description,
+            "icon_url": achievement.icon_url,
+            "earned_at": datetime.utcnow().isoformat()
+        }
+        for achievement in new_achievements
+    ])
+
+    return jsonify(current_achievements)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5555)
