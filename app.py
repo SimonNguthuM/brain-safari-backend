@@ -456,12 +456,11 @@ def submit_quiz(quiz_id):
     data = request.get_json()
     logger.debug(f"Submitting quiz {quiz_id} for user {current_user.id}. Data: {data}")
 
-
     quiz = QuizContent.query.get_or_404(quiz_id)
 
     selected_option = data.get("selected_option")
 
-    score = 1 if selected_option == quiz.correct_option else 0
+    score = quiz.points if selected_option == quiz.correct_option else 0
 
     submission = QuizSubmission(
         user_id=current_user.id,
@@ -473,11 +472,12 @@ def submit_quiz(quiz_id):
     db.session.add(submission)
     db.session.commit()
 
-    submission.update_user_points() 
+    submission.update_user_points()
 
     logger.info(f"Quiz {quiz_id} submitted by user {current_user.id}: {submission.to_dict()}")
 
     return jsonify({"message": "Quiz submitted", "score": score}), 200
+
 
 @app.route('/comments', methods=['POST'])
 def create_comment():
