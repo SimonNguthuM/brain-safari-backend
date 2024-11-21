@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Flask, request, jsonify, session, make_response, Blueprint
+from flask import Flask, request, jsonify, session, make_response, abort
 from flask_login import current_user, login_required, LoginManager, login_user
 from flask_restful import Resource as RestResource, Api 
 from flask_migrate import Migrate
@@ -33,13 +33,34 @@ from models import (
     QuizContent, QuizSubmission
 )
 
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__) 
+
+@app.route('/leaderboard', methods=['GET'])
+def get_leaderboard():
+    users = User.query.order_by(User.points.desc()).limit(8).all()  
+    result = [{"username": user.username.split()[0], "points": user.points} for user in users]
+    return jsonify(result)
+
+@app.route('/users/<username>/points', methods=['GET'])
+def get_user_points(username):
+    # Fetch the user from the database
+    user = User.query.filter_by(username=username).first()
+    
+    if user:
+        # Return user's points in JSON format
+        return jsonify({
+            "id": user.id,
+            "username": user.username,
+            "points": user.points
+        })
+    else:
+        return jsonify({"error": "User not found"}), 404
+
 
 @app.route('/admin/users', methods=['GET'])
 @login_required
@@ -409,7 +430,7 @@ def create_quiz_for_module(module_id):
     new_quiz = QuizContent(
         module_id=module_id,
         question=data.get("question"),
-        options=json.dumps(data.get("options")),  # Assuming options is a list
+        options=json.dumps(data.get("options")),
         correct_option=data.get("correct_option"),
     )
     db.session.add(new_quiz)
@@ -460,153 +481,124 @@ def submit_quiz(quiz_id):
 
     return jsonify({"message": "Quiz submitted", "score": score}), 200
 
+@app.route('/comments', methods=['POST'])
+def create_comment():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    content = data.get('content')
 
-class Comments(RestResource):
-   def post(self):
-       if 'user_id' not in session:
-           return {"message": "Unauthorized access"}, 401
-          
-       data = request.json
-       content = data.get('content')
-      
-       if not content:
-           return {"message": "Content is required"}, 400
-      
-       new_comment = Comment(
-           content=content,
-           user_id=session['user_id']
-       )
-       db.session.add(new_comment)
-       db.session.commit()
-      
-       return {
-           "message": "Comment added successfully",
-           "comment": new_comment.to_dict()
-       }, 201
+    user = User.query.get(user_id)
+    if not user:
+        abort(404, description="User not found")
 
+    comment = Comment(user_id=user_id, content=content)
+    db.session.add(comment)
+    db.session.commit()
 
-   def get(self):
-       comments = Comment.query.all()
-       return {
-           'comments': [comment.to_dict() for comment in comments]
-       }, 200
-  
-   def put(self, comment_id):
-       if 'user_id' not in session:
-           return {"message": "Unauthorized access"}, 401
-          
-       comment = Comment.query.get_or_404(comment_id)
-      
-     
-       if comment.user_id != session['user_id']:
-           return {"message": "Unauthorized to edit this comment"}, 403
-          
-       data = request.json
-       if not data or not data.get('content'):
-           return {'message': 'Content is required'}, 400
-      
-       comment.content = data['content']
-       db.session.commit()
+    return jsonify(comment.to_dict()), 201
 
+@app.route('/replies', methods=['POST'])
+def create_reply():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    comment_id = data.get('comment_id')
+    content = data.get('content')
 
-       return {
-           'message': 'Comment updated successfully',
-           'comment': comment.to_dict()
-       }, 200
-  
-   def delete(self, comment_id):
-       if 'user_id' not in session:
-           return {"message": "Unauthorized access"}, 401
-          
-       comment = Comment.query.get_or_404(comment_id)
-      
-      
-       if comment.user_id != session['user_id']:
-           return {"message": "Unauthorized to delete this comment"}, 403
-          
-       db.session.delete(comment)
-       db.session.commit()
+    user = User.query.get(user_id)
+    if not user:
+        abort(404, description="User not found")
 
+    comment = Comment.query.get(comment_id)
+    if not comment:
+        abort(404, description="Comment not found")
 
-       return {'message': 'Comment deleted successfully'}, 204
-   
+    reply = Reply(user_id=user_id, comment_id=comment_id, content=content)
+    db.session.add(reply)
+    db.session.commit()
 
-class Replies(RestResource):
-   def post(self, comment_id):
-       if 'user_id' not in session:
-           return {"message": "Unauthorized access"}, 401
-          
-       comment = Comment.query.get_or_404(comment_id)
-       data = request.json
-      
-       if not data or not data.get('content'):
-           return {"message": "Content is required"}, 400
-      
-       new_reply = Reply(
-           content=data['content'],
-           user_id=session['user_id'],
-           comment_id=comment_id
-       )
-       db.session.add(new_reply)
-       db.session.commit()
+    return jsonify(reply.to_dict()), 201
 
+@app.route('/comments', methods=['POST'])
+def post_comment():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    content = data.get('content')
 
-       return {
-           'message': 'Reply added successfully',
-           'reply': new_reply.to_dict()
-       }, 201
-  
-   def get(self, comment_id):
-       comment = Comment.query.get_or_404(comment_id)
-       return {
-           'comment_id': comment_id,
-           'replies': [reply.to_dict() for reply in comment.replies]
-       }, 200
-  
-   def put(self, comment_id, reply_id):
-       if 'user_id' not in session:
-           return {"message": "Unauthorized access"}, 401
-          
-       reply = Reply.query.filter_by(
-           comment_id=comment_id,
-           id=reply_id
-       ).first_or_404()
-      
-      
-       if reply.user_id != session['user_id']:
-           return {"message": "Unauthorized to edit this reply"}, 403
-          
-       data = request.json
-       if not data or not data.get('content'):
-           return {'message': 'Content is required'}, 400
-      
-       reply.content = data['content']
-       db.session.commit()
+    user = User.query.get(user_id)
+    if not user:
+        abort(404, description="User not found")
 
+    comment = Comment(user_id=user_id, content=content)
+    db.session.add(comment)
+    db.session.commit()
 
-       return {
-           'message': 'Reply updated successfully',
-           'reply': reply.to_dict()
-       }, 200
-  
-   def delete(self, comment_id, reply_id):
-       if 'user_id' not in session:
-           return {"message": "Unauthorized access"}, 401
-          
-       reply = Reply.query.filter_by(
-           comment_id=comment_id,
-           id=reply_id
-       ).first_or_404()
-      
-      
-       if reply.user_id != session['user_id']:
-           return {"message": "Unauthorized to delete this reply"}, 403
-          
-       db.session.delete(reply)
-       db.session.commit()
+    # Return comment with username and created_at timestamp
+    return jsonify({
+        **comment.to_dict(),
+        "username": user.username,
+        "created_at": comment.created_at.strftime('%Y-%m-%d %H:%M:%S')
+    }), 201
 
+@app.route('/replies', methods=['POST'])
+def post_reply():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    comment_id = data.get('comment_id')
+    content = data.get('content')
 
-       return {'message': 'Reply deleted successfully'}, 204
+    user = User.query.get(user_id)
+    if not user:
+        abort(404, description="User not found")
+
+    comment = Comment.query.get(comment_id)
+    if not comment:
+        abort(404, description="Comment not found")
+
+    reply = Reply(user_id=user_id, comment_id=comment_id, content=content)
+    db.session.add(reply)
+    db.session.commit()
+
+    # Return reply with username and created_at timestamp
+    return jsonify({
+        **reply.to_dict(),
+        "username": user.username,
+        "created_at": reply.created_at.strftime('%Y-%m-%d %H:%M:%S')
+    }), 201
+
+@app.route('/comments', methods=['GET'])
+def get_comments():
+    comments = Comment.query.all()
+    comments_data = []
+
+    for comment in comments:
+        replies = Reply.query.filter_by(comment_id=comment.id).all()
+        replies_data = [reply.to_dict() for reply in replies]
+        comment_data = comment.to_dict()
+        comment_data["replies"] = replies_data
+        comment_data["replies_count"] = len(replies_data)
+        comment_data["username"] = comment.user.username  # Include the username
+        comment_data["created_at"] = comment.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Include the creation time
+        comments_data.append(comment_data)
+    
+    return jsonify(comments_data), 200
+
+@app.route('/comments/user/<int:user_id>/replies', methods=['GET'])
+def get_user_comments_and_replies(user_id):
+    comments = Comment.query.filter_by(user_id=user_id).all()
+    comments_data = []
+
+    for comment in comments:
+        replies = Reply.query.filter_by(comment_id=comment.id).all()
+        replies_data = [reply.to_dict() for reply in replies]
+        
+        comment_data = comment.to_dict()
+        comment_data["replies"] = replies_data
+        comment_data["replies_count"] = len(replies_data)
+        comment_data["username"] = comment.user.username  # Include the username
+        comment_data["created_at"] = comment.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Include the creation time
+        comments_data.append(comment_data)
+
+    return jsonify({"comments": comments_data}), 200
 
 class Achievements(RestResource):
     def get(self, user_id):
@@ -656,9 +648,6 @@ def submit_feedback():
         "comment": feedback.comment,
         "rating": feedback.rating
     }), 201
-
-api.add_resource(Comments, '/comments', '/comments/<int:comment_id>')
-api.add_resource(Replies, '/comments/<int:comment_id>/replies')
 
 api.add_resource(Achievements, '/users/<int:user_id>/achievements')
 
