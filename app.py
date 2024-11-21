@@ -624,8 +624,32 @@ def submit_feedback():
     return jsonify({
         "feedback_id": feedback.id,
         "comment": feedback.comment,
-        "rating": feedback.rating
+        "rating": feedback.rating,
+        "resource_id": resource_id,
+        "user_id": current_user.id,
     }), 201
+
+@app.route('/resources/<int:resource_id>/feedbacks', methods=['GET'])
+def get_feedbacks_for_resource(resource_id):
+    """Fetch all feedbacks for a given resource."""
+    resource = Resource.query.get(resource_id)
+    if not resource:
+        return jsonify({"error": "Resource not found"}), 404
+
+    feedbacks = Feedback.query.filter_by(resource_id=resource_id).all()
+    feedback_list = [
+        {
+            "feedback_id": feedback.id,
+            "user_id": feedback.user_id,
+            "comment": feedback.comment,
+            "rating": feedback.rating,
+            "created_at": feedback.created_at.isoformat() if feedback.created_at else None,
+        }
+        for feedback in feedbacks
+    ]
+
+    return jsonify(feedback_list), 200
+
 
 @app.route('/users/<username>/achievements', methods=['GET'])
 def get_user_achievements(username):
