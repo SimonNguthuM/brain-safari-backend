@@ -60,16 +60,36 @@ def get_user_points(username):
         return jsonify({"error": "User not found"}), 404
 
 
-@app.route('/admin/users', methods=['GET'])
+@app.route('/admin/users', methods=['GET', 'DELETE'])
 @login_required
-def get_users():
-    """Admin route to fetch all users."""
+def manage_users():
+    """Admin route to fetch all users or remove a user."""
     if current_user.role != 'Admin':
         return jsonify({"error": "Unauthorized"}), 403
 
-    users = User.query.all()
-    user_list = [user.to_dict() for user in users]
-    return jsonify(user_list), 200
+    if request.method == 'GET':
+        users = User.query.all()
+        user_list = [user.to_dict() for user in users]
+        return jsonify(user_list), 200
+
+    if request.method == 'DELETE':
+        data = request.get_json()
+        user_id = data.get('user_id')
+
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        if user.id == current_user.id:
+            return jsonify({"error": "Admins cannot remove themselves"}), 403
+
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"message": f"User with ID {user_id} has been removed"}), 200
 
 
 @app.route('/admin/users/<int:user_id>/role', methods=['PATCH'])
@@ -106,7 +126,7 @@ def signup():
         username = data.get('username')
         email = data.get('email')
         password = data.get('password')
-        role = data.get('role', "Admin")  
+        role = data.get('role', "Learner")  
 
         if not username or not email or not password:
             return jsonify({"error": "All fields are required"}), 400
